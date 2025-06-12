@@ -43,25 +43,34 @@ export const SignUp = (): JSX.Element => {
       });
 
       if (signUpError) {
-        setError(signUpError.message);
+        // Handle specific error cases
+        if (signUpError.message.includes('User already registered') || signUpError.message.includes('already registered')) {
+          setError('An account with this email already exists. Please sign in instead.');
+        } else {
+          setError(signUpError.message);
+        }
         setLoading(false);
         return;
       }
 
       if (data.user) {
-        // Update the user profile with additional information
-        const { error: updateError } = await supabase
+        // Insert the user profile with additional information
+        const { error: insertError } = await supabase
           .from('users')
-          .update({
+          .insert({
+            id: data.user.id,
+            email: data.user.email,
             first_name: firstName || null,
             last_name: lastName || null,
             company: company || null,
-          })
-          .eq('id', data.user.id);
+            role: 'recruiter'
+          });
 
-        if (updateError) {
-          console.error('Error updating user profile:', updateError);
-          // Don't show this error to user as the account was created successfully
+        if (insertError) {
+          console.error('Error creating user profile:', insertError);
+          setError('Account created but there was an issue setting up your profile. Please try signing in.');
+          setLoading(false);
+          return;
         }
 
         setSuccess(true);

@@ -52,13 +52,22 @@ export const useAuth = () => {
         .single();
 
       if (error) {
+        // Handle the case where no profile exists (PGRST116 error code)
+        if (error.code === 'PGRST116') {
+          console.warn('No user profile found for user:', userId);
+          setUserProfile(null);
+          return;
+        }
+        
         console.error('Error fetching user profile:', error);
+        setUserProfile(null);
         return;
       }
 
       setUserProfile(data);
     } catch (error) {
       console.error('Error fetching user profile:', error);
+      setUserProfile(null);
     }
   };
 
