@@ -9,7 +9,7 @@ import { useAuth } from "../../hooks/useAuth";
 
 export const FigmaDesign = (): JSX.Element => {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-  const { user, signOut } = useAuth();
+  const { user, userProfile, signOut } = useAuth();
 
   const handleFileUpload = () => {
     // Create a hidden file input and trigger it
@@ -31,6 +31,10 @@ export const FigmaDesign = (): JSX.Element => {
     await signOut();
   };
 
+  const displayName = userProfile?.first_name && userProfile?.last_name 
+    ? `${userProfile.first_name} ${userProfile.last_name}`
+    : user?.email;
+
   return (
     <div className="bg-gray-50 h-screen flex overflow-hidden">
       {/* Left Sidebar - Candidate Searches */}
@@ -51,7 +55,12 @@ export const FigmaDesign = (): JSX.Element => {
               <p className="text-sm text-gray-500">AI-powered candidate search</p>
             </div>
             <div className="flex items-center gap-3">
-              <span className="text-sm text-gray-600">Welcome, {user?.email}</span>
+              <div className="text-right">
+                <p className="text-sm font-medium text-gray-700">Welcome, {displayName}</p>
+                {userProfile?.company && (
+                  <p className="text-xs text-gray-500">{userProfile.company}</p>
+                )}
+              </div>
               <Button
                 variant="outline"
                 size="sm"
