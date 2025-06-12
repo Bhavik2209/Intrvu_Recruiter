@@ -36,16 +36,38 @@ export const SignUp = (): JSX.Element => {
     }
 
     try {
+      // First, check if user already exists
+      const { data: existingUser } = await supabase.auth.getUser();
+      if (existingUser.user && existingUser.user.email === email) {
+        setError('You are already signed in with this email');
+        setLoading(false);
+        return;
+      }
+
       // Sign up the user
       const { data, error: signUpError } = await supabase.auth.signUp({
         email,
         password,
+        options: {
+          data: {
+            first_name: firstName,
+            last_name: lastName,
+            company: company,
+            role: 'recruiter'
+          }
+        }
       });
 
       if (signUpError) {
+        console.error('Sign up error:', signUpError);
+        
         // Handle specific error cases
-        if (signUpError.message.includes('User already registered') || signUpError.message.includes('already registered')) {
+        if (signUpError.message.includes('User already registered') || 
+            signUpError.message.includes('already registered') ||
+            signUpError.code === 'user_already_exists') {
           setError('An account with this email already exists. Please sign in instead.');
+        } else if (signUpError.message.includes('Database error')) {
+          setError('There was an issue creating your account. Please try again.');
         } else {
           setError(signUpError.message);
         }
@@ -54,23 +76,32 @@ export const SignUp = (): JSX.Element => {
       }
 
       if (data.user) {
-        // Insert the user profile with additional information
-        const { error: insertError } = await supabase
-          .from('users')
-          .insert({
-            id: data.user.id,
-            email: data.user.email,
-            first_name: firstName || null,
-            last_name: lastName || null,
-            company: company || null,
-            role: 'recruiter'
-          });
+        // Wait a moment for the trigger to potentially create the profile
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        // Try to create or update the user profile manually
+        try {
+          const { error: upsertError } = await supabase
+            .from('users')
+            .upsert({
+              id: data.user.id,
+              email: data.user.email || email,
+              first_name: firstName || null,
+              last_name: lastName || null,
+              company: company || null,
+              role: 'recruiter'
+            }, {
+              onConflict: 'id'
+            });
 
-        if (insertError) {
-          console.error('Error creating user profile:', insertError);
-          setError('Account created but there was an issue setting up your profile. Please try signing in.');
-          setLoading(false);
-          return;
+          if (upsertError) {
+            console.error('Error creating user profile:', upsertError);
+            // Don't fail the signup if profile creation fails
+            console.warn('Profile creation failed, but user account was created successfully');
+          }
+        } catch (profileError) {
+          console.error('Profile creation error:', profileError);
+          // Don't fail the signup if profile creation fails
         }
 
         setSuccess(true);
@@ -80,7 +111,8 @@ export const SignUp = (): JSX.Element => {
         }, 2000);
       }
     } catch (err) {
-      setError('An unexpected error occurred');
+      console.error('Unexpected error during signup:', err);
+      setError('An unexpected error occurred. Please try again.');
     } finally {
       setLoading(false);
     }

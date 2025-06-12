@@ -18,18 +18,60 @@ export const SignIn = (): JSX.Element => {
     setError('');
 
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
+      const { data, error: signInError } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
-      if (error) {
-        setError(error.message);
-      } else if (data.user) {
+      if (signInError) {
+        console.error('Sign in error:', signInError);
+        
+        if (signInError.message.includes('Invalid login credentials') || 
+            signInError.message.includes('invalid_credentials')) {
+          setError('Invalid email or password. Please check your credentials and try again.');
+        } else if (signInError.message.includes('Email not confirmed')) {
+          setError('Please check your email and confirm your account before signing in.');
+        } else {
+          setError(signInError.message);
+        }
+        setLoading(false);
+        return;
+      }
+
+      if (data.user) {
+        // Check if user profile exists, create if it doesn't
+        try {
+          const { data: profile, error: profileError } = await supabase
+            .from('users')
+            .select('*')
+            .eq('id', data.user.id)
+            .single();
+
+          if (profileError && profileError.code === 'PGRST116') {
+            // Profile doesn't exist, create it
+            const { error: createError } = await supabase
+              .from('users')
+              .insert({
+                id: data.user.id,
+                email: data.user.email || email,
+                role: 'recruiter'
+              });
+
+            if (createError) {
+              console.error('Error creating user profile on sign in:', createError);
+            }
+          }
+        } catch (profileError) {
+          console.error('Profile check error:', profileError);
+          // Don't fail sign in if profile operations fail
+        }
+
+        // Navigate to main app
         navigate('/');
       }
     } catch (err) {
-      setError('An unexpected error occurred');
+      console.error('Unexpected error during sign in:', err);
+      setError('An unexpected error occurred. Please try again.');
     } finally {
       setLoading(false);
     }
