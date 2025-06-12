@@ -9,6 +9,9 @@ export const SignUp = (): JSX.Element => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [company, setCompany] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
@@ -33,14 +36,34 @@ export const SignUp = (): JSX.Element => {
     }
 
     try {
-      const { data, error } = await supabase.auth.signUp({
+      // Sign up the user
+      const { data, error: signUpError } = await supabase.auth.signUp({
         email,
         password,
       });
 
-      if (error) {
-        setError(error.message);
-      } else if (data.user) {
+      if (signUpError) {
+        setError(signUpError.message);
+        setLoading(false);
+        return;
+      }
+
+      if (data.user) {
+        // Update the user profile with additional information
+        const { error: updateError } = await supabase
+          .from('users')
+          .update({
+            first_name: firstName || null,
+            last_name: lastName || null,
+            company: company || null,
+          })
+          .eq('id', data.user.id);
+
+        if (updateError) {
+          console.error('Error updating user profile:', updateError);
+          // Don't show this error to user as the account was created successfully
+        }
+
         setSuccess(true);
         // Auto-redirect to sign in after successful signup
         setTimeout(() => {
@@ -94,9 +117,52 @@ export const SignUp = (): JSX.Element => {
                 </div>
               )}
 
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label htmlFor="firstName" className="block text-sm font-medium text-gray-700 mb-2">
+                    First Name
+                  </label>
+                  <Input
+                    id="firstName"
+                    type="text"
+                    value={firstName}
+                    onChange={(e) => setFirstName(e.target.value)}
+                    placeholder="Enter your first name"
+                    className="w-full"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="lastName" className="block text-sm font-medium text-gray-700 mb-2">
+                    Last Name
+                  </label>
+                  <Input
+                    id="lastName"
+                    type="text"
+                    value={lastName}
+                    onChange={(e) => setLastName(e.target.value)}
+                    placeholder="Enter your last name"
+                    className="w-full"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label htmlFor="company" className="block text-sm font-medium text-gray-700 mb-2">
+                  Company
+                </label>
+                <Input
+                  id="company"
+                  type="text"
+                  value={company}
+                  onChange={(e) => setCompany(e.target.value)}
+                  placeholder="Enter your company name"
+                  className="w-full"
+                />
+              </div>
+
               <div>
                 <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
-                  Email Address
+                  Email Address *
                 </label>
                 <Input
                   id="email"
@@ -111,7 +177,7 @@ export const SignUp = (): JSX.Element => {
 
               <div>
                 <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
-                  Password
+                  Password *
                 </label>
                 <Input
                   id="password"
@@ -126,7 +192,7 @@ export const SignUp = (): JSX.Element => {
 
               <div>
                 <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-2">
-                  Confirm Password
+                  Confirm Password *
                 </label>
                 <Input
                   id="confirmPassword"
