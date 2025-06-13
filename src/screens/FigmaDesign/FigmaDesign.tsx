@@ -9,7 +9,7 @@ import { useAuth } from "../../hooks/useAuth";
 
 export const FigmaDesign = (): JSX.Element => {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-  const { user, userProfile, signOut } = useAuth();
+  const { user, signOut } = useAuth();
 
   const handleFileUpload = () => {
     // Create a hidden file input and trigger it

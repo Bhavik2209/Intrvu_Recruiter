@@ -15,32 +15,30 @@ export const useAuth = () => {
       try {
         const { data: { session }, error } = await supabase.auth.getSession()
         
+        if (!mounted) return
+
         if (error) {
           console.error('Error getting session:', error)
-          if (mounted) {
-            setUser(null)
-            setUserProfile(null)
-          }
+          setUser(null)
+          setUserProfile(null)
+          setLoading(false)
           return
         }
 
-        if (mounted) {
-          setUser(session?.user ?? null)
-          
-          if (session?.user) {
-            await fetchUserProfile(session.user.id)
-          } else {
-            setUserProfile(null)
-          }
+        setUser(session?.user ?? null)
+        
+        if (session?.user) {
+          await fetchUserProfile(session.user.id)
+        } else {
+          setUserProfile(null)
         }
+        
+        setLoading(false)
       } catch (error) {
         console.error('Error getting session:', error)
         if (mounted) {
           setUser(null)
           setUserProfile(null)
-        }
-      } finally {
-        if (mounted) {
           setLoading(false)
         }
       }
@@ -52,6 +50,8 @@ export const useAuth = () => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         if (!mounted) return
+
+        console.log('Auth state changed:', event, session?.user?.email)
 
         try {
           setUser(session?.user ?? null)
@@ -65,10 +65,6 @@ export const useAuth = () => {
           console.error('Error handling auth state change:', error)
           if (mounted) {
             setUserProfile(null)
-          }
-        } finally {
-          if (mounted) {
-            setLoading(false)
           }
         }
       }

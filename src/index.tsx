@@ -9,6 +9,7 @@ import { useAuth } from "./hooks/useAuth";
 const AppRoutes = () => {
   const { user, loading } = useAuth();
 
+  // Show loading spinner while checking authentication
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -22,6 +23,7 @@ const AppRoutes = () => {
 
   return (
     <Routes>
+      {/* Public routes - only accessible when not authenticated */}
       <Route 
         path="/signin" 
         element={user ? <Navigate to="/" replace /> : <SignIn />} 
@@ -30,6 +32,8 @@ const AppRoutes = () => {
         path="/signup" 
         element={user ? <Navigate to="/" replace /> : <SignUp />} 
       />
+      
+      {/* Protected routes - only accessible when authenticated */}
       <Route 
         path="/" 
         element={
@@ -38,7 +42,12 @@ const AppRoutes = () => {
           </ProtectedRoute>
         } 
       />
-      <Route path="*" element={<Navigate to="/" replace />} />
+      
+      {/* Catch all route */}
+      <Route 
+        path="*" 
+        element={<Navigate to={user ? "/" : "/signin"} replace />} 
+      />
     </Routes>
   );
 };
