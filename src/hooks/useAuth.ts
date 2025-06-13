@@ -1,4 +1,3 @@
-// src/hooks/useAuth.ts - FIXED VERSION
 import { useState, useEffect } from 'react'
 import { User as SupabaseUser } from '@supabase/supabase-js'
 import { supabase, User } from '../lib/supabase'
@@ -23,6 +22,7 @@ export const useAuth = () => {
           console.error('Error getting session:', error)
           setUser(null)
           setUserProfile(null)
+          setLoading(false)
           return
         }
 
@@ -30,20 +30,20 @@ export const useAuth = () => {
         setUser(session?.user ?? null)
         
         if (session?.user) {
+          // Fetch profile and then set loading to false
           await fetchUserProfile(session.user.id)
         } else {
           setUserProfile(null)
         }
+        
+        // Always set loading to false after initial session check
+        setLoading(false)
         
       } catch (error) {
         console.error('Error getting session:', error)
         if (mounted) {
           setUser(null)
           setUserProfile(null)
-        }
-      } finally {
-        // CRITICAL: Always set loading to false
-        if (mounted) {
           setLoading(false)
         }
       }
@@ -62,19 +62,19 @@ export const useAuth = () => {
           setUser(session?.user ?? null)
           
           if (session?.user) {
-            await fetchUserProfile(session.user.id)
+            // Fetch profile but don't wait for it to complete
+            fetchUserProfile(session.user.id)
           } else {
             setUserProfile(null)
           }
+          
+          // Set loading to false immediately after auth state change
+          setLoading(false)
           
         } catch (error) {
           console.error('Error handling auth state change:', error)
           if (mounted) {
             setUserProfile(null)
-          }
-        } finally {
-          // CRITICAL: Always set loading to false after auth state change
-          if (mounted) {
             setLoading(false)
           }
         }
