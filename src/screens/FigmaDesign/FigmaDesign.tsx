@@ -1,15 +1,13 @@
-import { SendIcon, PaperclipIcon, LogOutIcon } from "lucide-react";
+import { SendIcon, PaperclipIcon } from "lucide-react";
 import React, { useState } from "react";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import { CandidateSearchSection } from "./sections/CandidateSearchSection";
 import { JobDescriptionSection } from "./sections/JobDescriptionSection";
 import { MatchingCandidatesSection } from "./sections/MatchingCandidatesSection";
-import { useAuth } from "../../hooks/useAuth";
 
 export const FigmaDesign = (): JSX.Element => {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-  const { user, userProfile, signOut } = useAuth();
 
   const handleFileUpload = () => {
     // Create a hidden file input and trigger it
@@ -26,14 +24,6 @@ export const FigmaDesign = (): JSX.Element => {
     };
     fileInput.click();
   };
-
-  const handleSignOut = async () => {
-    await signOut();
-  };
-
-  const displayName = userProfile?.first_name && userProfile?.last_name 
-    ? `${userProfile.first_name} ${userProfile.last_name}`
-    : user?.email;
 
   return (
     <div className="bg-gray-50 h-screen flex overflow-hidden">
@@ -56,20 +46,9 @@ export const FigmaDesign = (): JSX.Element => {
             </div>
             <div className="flex items-center gap-3">
               <div className="text-right">
-                <p className="text-sm font-medium text-gray-700">Welcome, {displayName}</p>
-                {userProfile?.company && (
-                  <p className="text-xs text-gray-500">{userProfile.company}</p>
-                )}
+                <p className="text-sm font-medium text-gray-700">Welcome to IntrvuRecruiter</p>
+                <p className="text-xs text-gray-500">Find the perfect candidates</p>
               </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleSignOut}
-                className="flex items-center gap-2"
-              >
-                <LogOutIcon className="h-4 w-4" />
-                Sign Out
-              </Button>
             </div>
           </div>
         </div>
