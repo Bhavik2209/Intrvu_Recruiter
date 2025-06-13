@@ -1,3 +1,4 @@
+// src/screens/Auth/SignUp.tsx - DEBUG VERSION
 import React, { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
@@ -20,6 +21,8 @@ export const SignUp = (): JSX.Element => {
     setError('')
     setSuccess(false)
 
+    console.log('Sign up attempt for:', email)
+
     // Validation
     if (password !== confirmPassword) {
       setError('Passwords do not match')
@@ -40,11 +43,14 @@ export const SignUp = (): JSX.Element => {
     }
 
     try {
+      console.log('Calling supabase signUp...')
       // Sign up the user
       const { data, error: signUpError } = await supabase.auth.signUp({
         email,
         password,
       })
+
+      console.log('Sign up response:', { data, error: signUpError })
 
       if (signUpError) {
         console.error('Sign up error:', signUpError)
@@ -64,16 +70,29 @@ export const SignUp = (): JSX.Element => {
       }
 
       if (data.user) {
+        console.log('Sign up successful, user:', data.user.email)
+        console.log('Session:', data.session)
+        
+        // Check if email confirmation is required
+        if (!data.session && data.user && !data.user.email_confirmed_at) {
+          setError('Please check your email and click the confirmation link before signing in.')
+          setLoading(false)
+          return
+        }
+        
         setSuccess(true)
         // Auto-redirect to main app after successful signup
         setTimeout(() => {
           navigate('/')
         }, 1500)
+      } else {
+        console.error('Sign up returned no user data')
+        setError('Sign up failed - no user data returned')
+        setLoading(false)
       }
     } catch (err) {
       console.error('Unexpected error during signup:', err)
       setError('An unexpected error occurred. Please try again.')
-    } finally {
       setLoading(false)
     }
   }
@@ -179,6 +198,11 @@ export const SignUp = (): JSX.Element => {
                   Sign in
                 </Link>
               </p>
+            </div>
+
+            {/* Debug info */}
+            <div className="mt-4 p-3 bg-gray-100 rounded text-xs">
+              <p>Debug: Check browser console for detailed logs</p>
             </div>
           </CardContent>
         </Card>
