@@ -61,10 +61,14 @@ export const useAuth = () => {
           } else {
             setUserProfile(null)
           }
+          
+          // IMPORTANT: Always set loading to false after handling auth state change
+          setLoading(false)
         } catch (error) {
           console.error('Error handling auth state change:', error)
           if (mounted) {
             setUserProfile(null)
+            setLoading(false)
           }
         }
       }
