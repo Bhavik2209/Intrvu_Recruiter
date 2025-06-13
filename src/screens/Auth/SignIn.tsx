@@ -1,3 +1,4 @@
+// src/screens/Auth/SignIn.tsx - DEBUG VERSION
 import React, { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
@@ -17,6 +18,8 @@ export const SignIn = (): JSX.Element => {
     setLoading(true)
     setError('')
 
+    console.log('Sign in attempt for:', email)
+
     // Basic validation
     if (!email.includes('@')) {
       setError('Please enter a valid email address')
@@ -31,10 +34,13 @@ export const SignIn = (): JSX.Element => {
     }
 
     try {
+      console.log('Calling supabase signInWithPassword...')
       const { data, error: signInError } = await supabase.auth.signInWithPassword({
         email,
         password,
       })
+
+      console.log('Sign in response:', { data, error: signInError })
 
       if (signInError) {
         console.error('Sign in error:', signInError)
@@ -51,17 +57,34 @@ export const SignIn = (): JSX.Element => {
         return
       }
 
-      if (data.user) {
-        // Navigate to main app
-        navigate('/')
+      if (data.user && data.session) {
+        console.log('Sign in successful, user:', data.user.email)
+        // Don't navigate immediately, let the auth state change handle it
+        // The useAuth hook will detect the auth state change and update accordingly
+      } else {
+        console.error('Sign in returned no user or session')
+        setError('Sign in failed - no user data returned')
+        setLoading(false)
       }
     } catch (err) {
       console.error('Unexpected error during sign in:', err)
       setError('An unexpected error occurred. Please try again.')
-    } finally {
       setLoading(false)
     }
   }
+
+  // Test connection to Supabase
+  React.useEffect(() => {
+    const testConnection = async () => {
+      try {
+        const { data, error } = await supabase.auth.getSession()
+        console.log('Supabase connection test:', { connected: !error, error })
+      } catch (err) {
+        console.error('Supabase connection failed:', err)
+      }
+    }
+    testConnection()
+  }, [])
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
@@ -126,6 +149,11 @@ export const SignIn = (): JSX.Element => {
                   Sign up
                 </Link>
               </p>
+            </div>
+
+            {/* Debug info */}
+            <div className="mt-4 p-3 bg-gray-100 rounded text-xs">
+              <p>Debug: Check browser console for detailed logs</p>
             </div>
           </CardContent>
         </Card>
