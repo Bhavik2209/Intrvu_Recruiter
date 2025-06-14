@@ -24,6 +24,18 @@ serve(async (req) => {
       )
     }
 
+    // Check for OpenAI API key
+    const openaiApiKey = Deno.env.get('OPENAI_API_KEY')
+    if (!openaiApiKey) {
+      return new Response(
+        JSON.stringify({ error: 'OpenAI API key not configured. Please add OPENAI_API_KEY to your Supabase Edge Function secrets.' }),
+        { 
+          status: 500, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      )
+    }
+
     // Initialize Supabase client
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
@@ -80,24 +92,34 @@ serve(async (req) => {
     })
 
     // System prompt for recruitment assistant
-    const systemPrompt = `You are an AI recruitment assistant helping to find and evaluate candidates. 
+    const systemPrompt = `You are an AI recruitment assistant helping to find and evaluate candidates for job positions. 
     
 Current job search context:
 - Job Title: ${chat.title}
-- Job Description: ${chat.job_description || 'Not specified'}
+- Job Description: ${chat.job_description || 'Not specified yet'}
 
 Your role is to:
-1. Help analyze job requirements
-2. Suggest candidate search strategies
-3. Evaluate candidate profiles
-4. Provide recruitment insights
-5. Answer questions about candidates and hiring
+1. Help analyze and refine job requirements
+2. Suggest candidate search strategies and criteria
+3. Evaluate candidate profiles and provide matching scores
+4. Provide recruitment insights and market data
+5. Answer questions about candidates, hiring processes, and best practices
+6. Help create compelling job descriptions
+7. Suggest interview questions and evaluation criteria
 
-Be helpful, professional, and focused on recruitment tasks. Provide specific, actionable advice.`
+Guidelines:
+- Be professional, helpful, and focused on recruitment tasks
+- Provide specific, actionable advice
+- When discussing candidates, be objective and focus on qualifications
+- Suggest realistic salary ranges based on market data
+- Help identify key skills and requirements for roles
+- Provide insights on hiring trends and best practices
+- If job requirements are unclear, ask clarifying questions
 
-    // Make OpenAI API call (using a mock response for now)
-    // In production, you would use the actual OpenAI API
-    const aiResponse = await generateAIResponse(systemPrompt, conversationHistory)
+Always maintain a helpful and professional tone while providing valuable recruitment assistance.`
+
+    // Generate AI response using OpenAI API
+    const aiResponse = await generateOpenAIResponse(openaiApiKey, systemPrompt, conversationHistory)
 
     // Store AI response in database
     const { data: aiMessage, error: aiMessageError } = await supabaseClient
@@ -141,57 +163,67 @@ Be helpful, professional, and focused on recruitment tasks. Provide specific, ac
   }
 })
 
-// Mock AI response function - replace with actual OpenAI API call
-async function generateAIResponse(systemPrompt: string, conversationHistory: any[]): Promise<string> {
-  // This is a mock implementation
-  // In production, you would call the OpenAI API here
-  
-  const lastMessage = conversationHistory[conversationHistory.length - 1]?.content || ''
-  
-  // Simple mock responses based on keywords
-  if (lastMessage.toLowerCase().includes('react') || lastMessage.toLowerCase().includes('developer')) {
-    return `I understand you're looking for React developers. Based on your requirements, I can help you find candidates with the right skills. 
+// OpenAI API integration
+async function generateOpenAIResponse(apiKey: string, systemPrompt: string, conversationHistory: any[]): Promise<string> {
+  try {
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini', // Using the more cost-effective model
+        messages: [
+          {
+            role: 'system',
+            content: systemPrompt
+          },
+          ...conversationHistory
+        ],
+        max_tokens: 1000,
+        temperature: 0.7,
+        top_p: 1,
+        frequency_penalty: 0,
+        presence_penalty: 0
+      })
+    })
 
-Here are some key areas to focus on:
-- React experience (hooks, state management)
-- TypeScript proficiency
-- Testing frameworks (Jest, React Testing Library)
-- Modern development practices
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}))
+      console.error('OpenAI API error:', response.status, errorData)
+      
+      if (response.status === 401) {
+        throw new Error('Invalid OpenAI API key. Please check your OPENAI_API_KEY configuration.')
+      } else if (response.status === 429) {
+        throw new Error('OpenAI API rate limit exceeded. Please try again later.')
+      } else if (response.status === 500) {
+        throw new Error('OpenAI API is currently unavailable. Please try again later.')
+      } else {
+        throw new Error(`OpenAI API error: ${response.status}`)
+      }
+    }
 
-Would you like me to search our candidate database for profiles matching these criteria?`
+    const data = await response.json()
+    
+    if (!data.choices || !data.choices[0] || !data.choices[0].message) {
+      throw new Error('Invalid response format from OpenAI API')
+    }
+
+    return data.choices[0].message.content.trim()
+
+  } catch (error) {
+    console.error('Error calling OpenAI API:', error)
+    
+    // Fallback to a helpful error message for users
+    if (error.message.includes('API key')) {
+      return "I'm sorry, but the OpenAI API is not properly configured. Please contact your administrator to set up the API key."
+    } else if (error.message.includes('rate limit')) {
+      return "I'm currently experiencing high demand. Please try again in a few moments."
+    } else if (error.message.includes('unavailable')) {
+      return "I'm temporarily unavailable due to API issues. Please try again later."
+    } else {
+      return "I'm sorry, I'm having trouble processing your request right now. Please try again or rephrase your question."
+    }
   }
-  
-  if (lastMessage.toLowerCase().includes('candidate') || lastMessage.toLowerCase().includes('profile')) {
-    return `I can help you evaluate candidates based on your job requirements. Let me analyze the available profiles and provide you with the best matches.
-
-I'll consider factors like:
-- Technical skills alignment
-- Experience level
-- Previous project relevance
-- Cultural fit indicators
-
-Would you like me to show you the top matching candidates?`
-  }
-  
-  if (lastMessage.toLowerCase().includes('salary') || lastMessage.toLowerCase().includes('budget')) {
-    return `Salary expectations are an important factor in recruitment. Based on current market data:
-
-- Senior React developers typically range from $120k-$180k
-- Location significantly impacts compensation
-- Remote work options can expand your candidate pool
-- Consider total compensation including benefits
-
-What's your budget range for this position?`
-  }
-  
-  // Default response
-  return `Thank you for your message. I'm here to help you with your recruitment needs. I can assist with:
-
-- Analyzing job requirements
-- Finding matching candidates
-- Evaluating candidate profiles
-- Providing market insights
-- Answering hiring questions
-
-How can I help you find the perfect candidate for your role?`
 }
