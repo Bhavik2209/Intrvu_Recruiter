@@ -7,43 +7,7 @@ if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error('Missing Supabase environment variables. Please check your .env file.')
 }
 
-// Validate URL format
-try {
-  new URL(supabaseUrl)
-} catch (error) {
-  throw new Error(`Invalid Supabase URL format: ${supabaseUrl}`)
-}
-
-// Create client with additional options for better error handling
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    autoRefreshToken: true,
-    persistSession: true,
-    detectSessionInUrl: true
-  },
-  global: {
-    headers: {
-      'X-Client-Info': 'supabase-js-web'
-    }
-  }
-})
-
-// Test connection on initialization
-const testConnection = async () => {
-  try {
-    const { data, error } = await supabase.from('users').select('count').limit(1)
-    if (error) {
-      console.warn('Supabase connection test failed:', error.message)
-    } else {
-      console.log('Supabase connection successful')
-    }
-  } catch (error) {
-    console.warn('Supabase connection test error:', error)
-  }
-}
-
-// Test connection but don't block initialization
-testConnection()
+export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
 export interface User {
   id: string
