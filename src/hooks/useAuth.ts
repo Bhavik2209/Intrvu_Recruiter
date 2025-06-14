@@ -6,6 +6,7 @@ export const useAuth = () => {
   const [user, setUser] = useState<SupabaseUser | null>(null)
   const [userProfile, setUserProfile] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     let mounted = true
@@ -14,12 +15,15 @@ export const useAuth = () => {
     const getSession = async () => {
       try {
         console.log('Getting initial session...')
+        setError(null)
+        
         const { data: { session }, error } = await supabase.auth.getSession()
         
         if (!mounted) return
 
         if (error) {
           console.error('Error getting session:', error)
+          setError(`Authentication error: ${error.message}`)
           setUser(null)
           setUserProfile(null)
           setLoading(false)
@@ -30,18 +34,23 @@ export const useAuth = () => {
         setUser(session?.user ?? null)
         
         if (session?.user) {
-          // Fetch profile and then set loading to false
-          await fetchUserProfile(session.user.id)
+          // Fetch profile and handle any errors
+          try {
+            await fetchUserProfile(session.user.id)
+          } catch (profileError) {
+            console.error('Error fetching profile during session init:', profileError)
+            // Don't set error state here as user is still authenticated
+          }
         } else {
           setUserProfile(null)
         }
         
-        // Always set loading to false after initial session check
         setLoading(false)
         
       } catch (error) {
         console.error('Error getting session:', error)
         if (mounted) {
+          setError(`Failed to initialize authentication: ${error instanceof Error ? error.message : 'Unknown error'}`)
           setUser(null)
           setUserProfile(null)
           setLoading(false)
@@ -59,21 +68,27 @@ export const useAuth = () => {
         console.log('Auth state changed:', event, session?.user?.email || 'No user')
 
         try {
+          setError(null)
           setUser(session?.user ?? null)
           
           if (session?.user) {
-            // Fetch profile but don't wait for it to complete
-            fetchUserProfile(session.user.id)
+            // Fetch profile but handle errors gracefully
+            try {
+              await fetchUserProfile(session.user.id)
+            } catch (profileError) {
+              console.error('Error fetching profile during auth change:', profileError)
+              // Don't set error state here as user is still authenticated
+            }
           } else {
             setUserProfile(null)
           }
           
-          // Set loading to false immediately after auth state change
           setLoading(false)
           
         } catch (error) {
           console.error('Error handling auth state change:', error)
           if (mounted) {
+            setError(`Authentication state error: ${error instanceof Error ? error.message : 'Unknown error'}`)
             setUserProfile(null)
             setLoading(false)
           }
@@ -90,6 +105,18 @@ export const useAuth = () => {
   const fetchUserProfile = async (userId: string) => {
     try {
       console.log('Fetching user profile for:', userId)
+      
+      // Test connection first
+      const { data: testData, error: testError } = await supabase
+        .from('users')
+        .select('count')
+        .limit(1)
+
+      if (testError) {
+        console.error('Supabase connection test failed:', testError)
+        throw new Error(`Database connection failed: ${testError.message}`)
+      }
+
       const { data, error } = await supabase
         .from('users')
         .select('*')
@@ -98,8 +125,7 @@ export const useAuth = () => {
 
       if (error) {
         console.error('Error fetching user profile:', error)
-        setUserProfile(null)
-        return
+        throw new Error(`Failed to fetch user profile: ${error.message}`)
       }
 
       // If no profile exists, create one
@@ -108,25 +134,29 @@ export const useAuth = () => {
         
         try {
           const { data: user } = await supabase.auth.getUser()
+          if (!user.user?.email) {
+            throw new Error('No email found for user')
+          }
+
           const { data: newProfile, error: insertError } = await supabase
             .from('users')
             .insert({
               id: userId,
-              email: user.user?.email || ''
+              email: user.user.email
             })
             .select()
             .single()
 
           if (insertError) {
             console.error('Error creating user profile:', insertError)
-            setUserProfile(null)
-          } else {
-            console.log('Created new profile:', newProfile)
-            setUserProfile(newProfile)
+            throw new Error(`Failed to create user profile: ${insertError.message}`)
           }
+
+          console.log('Created new profile:', newProfile)
+          setUserProfile(newProfile)
         } catch (insertError) {
           console.error('Error creating user profile:', insertError)
-          setUserProfile(null)
+          throw insertError
         }
         return
       }
@@ -134,19 +164,22 @@ export const useAuth = () => {
       console.log('User profile loaded:', data)
       setUserProfile(data)
     } catch (error) {
-      console.error('Error fetching user profile:', error)
+      console.error('Error in fetchUserProfile:', error)
       setUserProfile(null)
+      throw error
     }
   }
 
   const signOut = async () => {
     try {
       console.log('Signing out...')
+      setError(null)
       await supabase.auth.signOut()
       setUser(null)
       setUserProfile(null)
     } catch (error) {
       console.error('Error signing out:', error)
+      setError(`Sign out failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
     }
   }
 
@@ -154,6 +187,7 @@ export const useAuth = () => {
     user,
     userProfile,
     loading,
+    error,
     signOut,
   }
 }
