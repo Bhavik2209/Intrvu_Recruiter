@@ -6,6 +6,12 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
+interface AIResponse {
+  message_type: 'job_description' | 'chat_message' | 'search_refinement'
+  extracted_job_description?: string
+  ai_response_text: string
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
@@ -91,35 +97,111 @@ serve(async (req) => {
       content: message
     })
 
-    // System prompt for recruitment assistant
+    // Enhanced system prompt for job description detection and recruitment assistance
     const systemPrompt = `You are an AI recruitment assistant helping to find and evaluate candidates for job positions. 
-    
+
 Current job search context:
 - Job Title: ${chat.title}
-- Job Description: ${chat.job_description || 'Not specified yet'}
+- Current Job Description: ${chat.job_description || 'Not specified yet'}
 
-Your role is to:
-1. Help analyze and refine job requirements
-2. Suggest candidate search strategies and criteria
-3. Evaluate candidate profiles and provide matching scores
-4. Provide recruitment insights and market data
-5. Answer questions about candidates, hiring processes, and best practices
-6. Help create compelling job descriptions
-7. Suggest interview questions and evaluation criteria
+CRITICAL INSTRUCTIONS:
+1. You MUST respond in valid JSON format with this exact structure:
+{
+  "message_type": "job_description" | "chat_message" | "search_refinement",
+  "extracted_job_description": "string (only if message_type is job_description)",
+  "ai_response_text": "your conversational response to the user"
+}
 
-Guidelines:
+2. MESSAGE TYPE CLASSIFICATION:
+- "job_description": When the user provides a complete job posting, job requirements, or detailed role description (structured or unstructured)
+- "search_refinement": When the user is refining existing search criteria, asking to modify requirements, or requesting specific candidate filters
+- "chat_message": For general questions, conversations, or requests that don't involve job requirements
+
+3. JOB DESCRIPTION DETECTION:
+Look for these indicators of a job description:
+- Job titles or role names
+- Required skills, technologies, or qualifications
+- Years of experience requirements
+- Responsibilities or duties
+- Company information or job benefits
+- Salary information
+- Educational requirements
+- Location or remote work details
+- Structured job posting format
+
+Examples of job descriptions:
+- "We need a Senior React Developer with 5+ years of experience..."
+- "About the job: We are seeking a Machine Learning Intern..."
+- "Looking for a full-stack developer who knows Node.js, React, and PostgreSQL"
+- "Frontend Engineer position requiring expertise in TypeScript and Next.js"
+
+4. EXTRACTED JOB DESCRIPTION:
+- If message_type is "job_description", extract and clean up the job requirements
+- Include all relevant details: skills, experience, responsibilities, qualifications
+- Format it clearly and professionally
+- If the user provides an unstructured description, structure it appropriately
+
+5. AI RESPONSE GUIDELINES:
 - Be professional, helpful, and focused on recruitment tasks
-- Provide specific, actionable advice
-- When discussing candidates, be objective and focus on qualifications
-- Suggest realistic salary ranges based on market data
-- Help identify key skills and requirements for roles
-- Provide insights on hiring trends and best practices
-- If job requirements are unclear, ask clarifying questions
+- Acknowledge when you've detected and saved a job description
+- Provide specific, actionable advice about candidate search strategies
+- Ask clarifying questions if job requirements are unclear
+- Suggest realistic salary ranges and market insights when relevant
+- Help identify key skills and must-have vs nice-to-have requirements
 
-Always maintain a helpful and professional tone while providing valuable recruitment assistance.`
+REMEMBER: Always respond in valid JSON format. Do not include any text outside the JSON structure.`
 
     // Generate AI response using OpenAI API
-    const aiResponse = await generateOpenAIResponse(openaiApiKey, systemPrompt, conversationHistory)
+    const aiResponseData = await generateOpenAIResponse(openaiApiKey, systemPrompt, conversationHistory)
+
+    // Parse the AI response to extract structured data
+    let parsedResponse: AIResponse
+    try {
+      parsedResponse = JSON.parse(aiResponseData)
+      
+      // Validate the response structure
+      if (!parsedResponse.message_type || !parsedResponse.ai_response_text) {
+        throw new Error('Invalid response structure')
+      }
+      
+      // Validate message_type
+      if (!['job_description', 'chat_message', 'search_refinement'].includes(parsedResponse.message_type)) {
+        throw new Error('Invalid message_type')
+      }
+      
+    } catch (parseError) {
+      console.error('Error parsing AI response:', parseError)
+      console.error('Raw AI response:', aiResponseData)
+      
+      // Fallback to treating as regular chat message
+      parsedResponse = {
+        message_type: 'chat_message',
+        ai_response_text: aiResponseData || "I'm sorry, I had trouble processing your request. Could you please rephrase it?"
+      }
+    }
+
+    // Update job description in chat if detected
+    if (parsedResponse.message_type === 'job_description' && parsedResponse.extracted_job_description) {
+      try {
+        const { error: updateError } = await supabaseClient
+          .from('chats')
+          .update({ 
+            job_description: parsedResponse.extracted_job_description,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', chatId)
+
+        if (updateError) {
+          console.error('Error updating job description:', updateError)
+          // Don't fail the entire request, just log the error
+        } else {
+          console.log('Successfully updated job description for chat:', chatId)
+        }
+      } catch (updateError) {
+        console.error('Error updating chat with job description:', updateError)
+        // Continue with the response even if update fails
+      }
+    }
 
     // Store AI response in database
     const { data: aiMessage, error: aiMessageError } = await supabaseClient
@@ -127,7 +209,7 @@ Always maintain a helpful and professional tone while providing valuable recruit
       .insert({
         chat_id: chatId,
         user_id: userId,
-        content: aiResponse,
+        content: parsedResponse.ai_response_text,
         type: 'ai'
       })
       .select()
@@ -145,7 +227,10 @@ Always maintain a helpful and professional tone while providing valuable recruit
     }
 
     return new Response(
-      JSON.stringify({ message: aiMessage }),
+      JSON.stringify({ 
+        message: aiMessage,
+        job_description_updated: parsedResponse.message_type === 'job_description' && parsedResponse.extracted_job_description ? true : false
+      }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
       }
@@ -163,7 +248,7 @@ Always maintain a helpful and professional tone while providing valuable recruit
   }
 })
 
-// OpenAI API integration
+// OpenAI API integration with enhanced job description detection
 async function generateOpenAIResponse(apiKey: string, systemPrompt: string, conversationHistory: any[]): Promise<string> {
   try {
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -181,11 +266,12 @@ async function generateOpenAIResponse(apiKey: string, systemPrompt: string, conv
           },
           ...conversationHistory
         ],
-        max_tokens: 1000,
-        temperature: 0.7,
+        max_tokens: 1500,
+        temperature: 0.3, // Lower temperature for more consistent JSON responses
         top_p: 1,
         frequency_penalty: 0,
-        presence_penalty: 0
+        presence_penalty: 0,
+        response_format: { type: "json_object" } // Ensure JSON response
       })
     })
 
@@ -215,15 +301,27 @@ async function generateOpenAIResponse(apiKey: string, systemPrompt: string, conv
   } catch (error) {
     console.error('Error calling OpenAI API:', error)
     
-    // Fallback to a helpful error message for users
+    // Fallback responses based on error type
     if (error.message.includes('API key')) {
-      return "I'm sorry, but the OpenAI API is not properly configured. Please contact your administrator to set up the API key."
+      return JSON.stringify({
+        message_type: 'chat_message',
+        ai_response_text: "I'm sorry, but the OpenAI API is not properly configured. Please contact your administrator to set up the API key."
+      })
     } else if (error.message.includes('rate limit')) {
-      return "I'm currently experiencing high demand. Please try again in a few moments."
+      return JSON.stringify({
+        message_type: 'chat_message',
+        ai_response_text: "I'm currently experiencing high demand. Please try again in a few moments."
+      })
     } else if (error.message.includes('unavailable')) {
-      return "I'm temporarily unavailable due to API issues. Please try again later."
+      return JSON.stringify({
+        message_type: 'chat_message',
+        ai_response_text: "I'm temporarily unavailable due to API issues. Please try again later."
+      })
     } else {
-      return "I'm sorry, I'm having trouble processing your request right now. Please try again or rephrase your question."
+      return JSON.stringify({
+        message_type: 'chat_message',
+        ai_response_text: "I'm sorry, I'm having trouble processing your request right now. Please try again or rephrase your question."
+      })
     }
   }
 }
