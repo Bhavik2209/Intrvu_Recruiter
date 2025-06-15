@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase, chatOperations, messageOperations, Chat, ChatMessage } from '../lib/supabase'
+import { useResumeMatching } from './useResumeMatching'
 
 export const useChat = (userId: string | undefined) => {
   const [chats, setChats] = useState<Chat[]>([])
@@ -7,6 +8,8 @@ export const useChat = (userId: string | undefined) => {
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [loading, setLoading] = useState(true)
   const [sendingMessage, setSendingMessage] = useState(false)
+  
+  const { analyzeResumes, results: matchingResults, loading: matchingLoading } = useResumeMatching()
 
   // Load user's chats
   const loadChats = useCallback(async () => {
@@ -122,10 +125,16 @@ export const useChat = (userId: string | undefined) => {
         throw new Error('Failed to get AI response')
       }
 
-      const { message: aiMessage } = await response.json()
+      const { message: aiMessage, trigger_resume_matching, job_description } = await response.json()
       
       // Add AI message to local state
       setMessages(prev => [...prev, aiMessage])
+
+      // Trigger resume matching if requested
+      if (trigger_resume_matching && job_description) {
+        console.log('Triggering resume matching with job description:', job_description)
+        await analyzeResumes(job_description, activeChatId)
+      }
 
     } catch (error) {
       console.error('Error sending message:', error)
@@ -133,7 +142,7 @@ export const useChat = (userId: string | undefined) => {
     } finally {
       setSendingMessage(false)
     }
-  }, [activeChatId, userId])
+  }, [activeChatId, userId, analyzeResumes])
 
   // Set up real-time subscription for active chat
   useEffect(() => {
@@ -175,5 +184,7 @@ export const useChat = (userId: string | undefined) => {
     updateChatTitle,
     deleteChat,
     sendMessage,
+    matchingResults,
+    matchingLoading,
   }
 }

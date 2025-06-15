@@ -7,9 +7,10 @@ const corsHeaders = {
 }
 
 interface AIResponse {
-  message_type: 'job_description' | 'chat_message' | 'search_refinement'
+  message_type: 'job_description' | 'chat_message' | 'search_refinement' | 'resume_analysis'
   extracted_job_description?: string
   ai_response_text: string
+  trigger_resume_matching?: boolean
 }
 
 serve(async (req) => {
@@ -54,7 +55,7 @@ serve(async (req) => {
       .select('content, type, created_at')
       .eq('chat_id', chatId)
       .order('created_at', { ascending: true })
-      .limit(20) // Last 20 messages for context
+      .limit(20)
 
     if (messagesError) {
       console.error('Error fetching messages:', messagesError)
@@ -107,14 +108,16 @@ Current job search context:
 CRITICAL INSTRUCTIONS:
 1. You MUST respond in valid JSON format with this exact structure:
 {
-  "message_type": "job_description" | "chat_message" | "search_refinement",
+  "message_type": "job_description" | "chat_message" | "search_refinement" | "resume_analysis",
   "extracted_job_description": "string (only if message_type is job_description)",
-  "ai_response_text": "your conversational response to the user"
+  "ai_response_text": "your conversational response to the user",
+  "trigger_resume_matching": boolean (true only when job description is complete and user wants to see matches)
 }
 
 2. MESSAGE TYPE CLASSIFICATION:
-- "job_description": When the user provides a complete job posting, job requirements, or detailed role description (structured or unstructured)
+- "job_description": When the user provides a complete job posting, job requirements, or detailed role description
 - "search_refinement": When the user is refining existing search criteria, asking to modify requirements, or requesting specific candidate filters
+- "resume_analysis": When the user explicitly asks to analyze resumes, find matches, or see candidate results
 - "chat_message": For general questions, conversations, or requests that don't involve job requirements
 
 3. JOB DESCRIPTION DETECTION:
@@ -129,19 +132,20 @@ Look for these indicators of a job description:
 - Location or remote work details
 - Structured job posting format
 
-Examples of job descriptions:
-- "We need a Senior React Developer with 5+ years of experience..."
-- "About the job: We are seeking a Machine Learning Intern..."
-- "Looking for a full-stack developer who knows Node.js, React, and PostgreSQL"
-- "Frontend Engineer position requiring expertise in TypeScript and Next.js"
+4. RESUME MATCHING TRIGGERS:
+Set "trigger_resume_matching" to true when:
+- User explicitly asks to "find candidates", "analyze resumes", "show matches", "search for candidates"
+- User asks "who matches this job description?"
+- User requests to see candidate results or matching profiles
+- A complete job description exists and user wants to proceed with candidate search
 
-4. EXTRACTED JOB DESCRIPTION:
+5. EXTRACTED JOB DESCRIPTION:
 - If message_type is "job_description", extract and clean up the job requirements
 - Include all relevant details: skills, experience, responsibilities, qualifications
 - Format it clearly and professionally
 - If the user provides an unstructured description, structure it appropriately
 
-5. AI RESPONSE GUIDELINES:
+6. AI RESPONSE GUIDELINES:
 - You are assisting a hiring manager or sourcing specialist - NEVER respond from a candidate perspective
 - Be professional, helpful, and focused on recruitment tasks from the employer's viewpoint
 - Acknowledge when you've detected and saved a job description
@@ -151,13 +155,22 @@ Examples of job descriptions:
 - Help identify key skills and must-have vs nice-to-have requirements
 - Provide insights on hiring trends and best practices
 - Help create compelling job descriptions and postings
+- When a job description is complete, offer to analyze resumes and find matching candidates
 
-6. IMPORTANT RESTRICTIONS:
+7. IMPORTANT RESTRICTIONS:
 - NEVER offer assistance with interview preparation from a candidate's perspective
 - NEVER provide advice on how candidates should prepare for interviews
 - NEVER suggest ways for candidates to improve their resumes or applications
 - Focus exclusively on helping employers find, evaluate, and hire candidates
 - If asked about interview preparation, redirect to employer-focused interview strategies instead
+
+8. RESUME MATCHING CONTEXT:
+When appropriate, mention that the system can:
+- Analyze resumes against job requirements using a 4-factor scoring system
+- Provide detailed match scores (75%+ threshold for recommendations)
+- Show keyword matches, experience alignment, education fit, and skills relevance
+- Rank candidates from highest to lowest match percentage
+- Provide detailed analysis of why each candidate matches or doesn't match
 
 REMEMBER: Always respond in valid JSON format. Do not include any text outside the JSON structure.`
 
@@ -175,7 +188,7 @@ REMEMBER: Always respond in valid JSON format. Do not include any text outside t
       }
       
       // Validate message_type
-      if (!['job_description', 'chat_message', 'search_refinement'].includes(parsedResponse.message_type)) {
+      if (!['job_description', 'chat_message', 'search_refinement', 'resume_analysis'].includes(parsedResponse.message_type)) {
         throw new Error('Invalid message_type')
       }
       
@@ -186,7 +199,8 @@ REMEMBER: Always respond in valid JSON format. Do not include any text outside t
       // Fallback to treating as regular chat message
       parsedResponse = {
         message_type: 'chat_message',
-        ai_response_text: aiResponseData || "I'm sorry, I had trouble processing your request. Could you please rephrase it?"
+        ai_response_text: aiResponseData || "I'm sorry, I had trouble processing your request. Could you please rephrase it?",
+        trigger_resume_matching: false
       }
     }
 
@@ -203,13 +217,11 @@ REMEMBER: Always respond in valid JSON format. Do not include any text outside t
 
         if (updateError) {
           console.error('Error updating job description:', updateError)
-          // Don't fail the entire request, just log the error
         } else {
           console.log('Successfully updated job description for chat:', chatId)
         }
       } catch (updateError) {
         console.error('Error updating chat with job description:', updateError)
-        // Continue with the response even if update fails
       }
     }
 
@@ -239,7 +251,9 @@ REMEMBER: Always respond in valid JSON format. Do not include any text outside t
     return new Response(
       JSON.stringify({ 
         message: aiMessage,
-        job_description_updated: parsedResponse.message_type === 'job_description' && parsedResponse.extracted_job_description ? true : false
+        job_description_updated: parsedResponse.message_type === 'job_description' && parsedResponse.extracted_job_description ? true : false,
+        trigger_resume_matching: parsedResponse.trigger_resume_matching || false,
+        job_description: chat.job_description || parsedResponse.extracted_job_description
       }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
@@ -268,7 +282,7 @@ async function generateOpenAIResponse(apiKey: string, systemPrompt: string, conv
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o-mini', // Using the more cost-effective model
+        model: 'gpt-4o-mini',
         messages: [
           {
             role: 'system',
@@ -277,11 +291,11 @@ async function generateOpenAIResponse(apiKey: string, systemPrompt: string, conv
           ...conversationHistory
         ],
         max_tokens: 1500,
-        temperature: 0.3, // Lower temperature for more consistent JSON responses
+        temperature: 0.3,
         top_p: 1,
         frequency_penalty: 0,
         presence_penalty: 0,
-        response_format: { type: "json_object" } // Ensure JSON response
+        response_format: { type: "json_object" }
       })
     })
 
@@ -315,22 +329,26 @@ async function generateOpenAIResponse(apiKey: string, systemPrompt: string, conv
     if (error.message.includes('API key')) {
       return JSON.stringify({
         message_type: 'chat_message',
-        ai_response_text: "I'm sorry, but the OpenAI API is not properly configured. Please contact your administrator to set up the API key."
+        ai_response_text: "I'm sorry, but the OpenAI API is not properly configured. Please contact your administrator to set up the API key.",
+        trigger_resume_matching: false
       })
     } else if (error.message.includes('rate limit')) {
       return JSON.stringify({
         message_type: 'chat_message',
-        ai_response_text: "I'm currently experiencing high demand. Please try again in a few moments."
+        ai_response_text: "I'm currently experiencing high demand. Please try again in a few moments.",
+        trigger_resume_matching: false
       })
     } else if (error.message.includes('unavailable')) {
       return JSON.stringify({
         message_type: 'chat_message',
-        ai_response_text: "I'm temporarily unavailable due to API issues. Please try again later."
+        ai_response_text: "I'm temporarily unavailable due to API issues. Please try again later.",
+        trigger_resume_matching: false
       })
     } else {
       return JSON.stringify({
         message_type: 'chat_message',
-        ai_response_text: "I'm sorry, I'm having trouble processing your request right now. Please try again or rephrase your question."
+        ai_response_text: "I'm sorry, I'm having trouble processing your request right now. Please try again or rephrase your question.",
+        trigger_resume_matching: false
       })
     }
   }
