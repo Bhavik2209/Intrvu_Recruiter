@@ -1,4 +1,4 @@
-import { SendIcon, PaperclipIcon, LogOutIcon } from "lucide-react";
+import { SendIcon, PaperclipIcon, LogOutIcon, ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
 import React, { useState } from "react";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
@@ -10,6 +10,7 @@ import { useChat } from "../../hooks/useChat";
 
 export const FigmaDesign = (): JSX.Element => {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [isCandidatesCollapsed, setIsCandidatesCollapsed] = useState(false);
   const [messageInput, setMessageInput] = useState("");
   const { user, signOut } = useAuth();
   
@@ -71,7 +72,7 @@ export const FigmaDesign = (): JSX.Element => {
 
   return (
     <div className="bg-gray-50 h-screen flex overflow-hidden">
-      {/* Left Sidebar - Candidate Searches */}
+      {/* Left Sidebar - Job Searches */}
       <div className={`${isSidebarCollapsed ? 'w-12' : 'w-[200px]'} bg-white border-r border-gray-200 flex flex-col transition-all duration-300 ease-in-out flex-shrink-0`}>
         <MatchingCandidatesSection 
           isCollapsed={isSidebarCollapsed}
@@ -166,38 +167,80 @@ export const FigmaDesign = (): JSX.Element => {
         </div>
       </div>
 
-      {/* Right Sidebar - Candidates */}
-      <div className={`${isSidebarCollapsed ? 'w-[420px]' : 'w-[400px]'} bg-white border-l border-gray-200 flex flex-col transition-all duration-300 ease-in-out flex-shrink-0`}>
-        {/* Matching Candidates Header */}
-        <div className="bg-blue-500 text-white p-4 flex-shrink-0">
-          <h2 className="font-medium">Matching Candidates</h2>
-          <p className="text-sm text-blue-100">
-            {activeChatId ? '3 candidates found' : 'Start a search to find candidates'}
-          </p>
-        </div>
-        
-        {/* Export Button */}
-        <div className="p-4 border-b border-gray-200 flex-shrink-0">
-          <Button 
-            variant="outline" 
-            size="sm" 
-            className="ml-auto flex"
-            disabled={!activeChatId}
-          >
-            Export
-          </Button>
-        </div>
-
-        {/* Candidates List - Scrollable */}
-        <div className="flex-1 overflow-y-auto">
-          {activeChatId ? (
-            <CandidateSearchSection />
-          ) : (
-            <div className="p-4 text-center text-gray-500">
-              <p className="text-sm">Start a new job search to see matching candidates</p>
+      {/* Right Sidebar - Matching Candidates */}
+      <div className={`${isCandidatesCollapsed ? 'w-12' : 'w-[420px]'} bg-white border-l border-gray-200 flex flex-col transition-all duration-300 ease-in-out flex-shrink-0`}>
+        {isCandidatesCollapsed ? (
+          /* Collapsed State */
+          <div className="h-full flex flex-col items-center py-4">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setIsCandidatesCollapsed(false)}
+              className="mb-4 rotate-180"
+              title="Expand candidates panel"
+            >
+              <ChevronLeftIcon className="h-4 w-4" />
+            </Button>
+            <div className="writing-mode-vertical text-sm font-medium text-gray-600 transform rotate-180">
+              Matching Candidates
             </div>
-          )}
-        </div>
+            {activeChatId && (
+              <div className="mt-4 flex flex-col gap-2">
+                <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+                  <span className="text-xs font-medium text-green-700">3</span>
+                </div>
+                <div className="text-xs text-gray-500 text-center">Found</div>
+              </div>
+            )}
+          </div>
+        ) : (
+          /* Expanded State */
+          <>
+            {/* Matching Candidates Header */}
+            <div className="bg-blue-500 text-white p-4 flex-shrink-0">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="font-medium">Matching Candidates</h2>
+                  <p className="text-sm text-blue-100">
+                    {activeChatId ? '3 candidates found' : 'Start a search to find candidates'}
+                  </p>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setIsCandidatesCollapsed(true)}
+                  className="h-8 w-8 text-white hover:bg-blue-600"
+                  title="Collapse candidates panel"
+                >
+                  <ChevronRightIcon className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+            
+            {/* Export Button */}
+            <div className="p-4 border-b border-gray-200 flex-shrink-0">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="ml-auto flex"
+                disabled={!activeChatId}
+              >
+                Export
+              </Button>
+            </div>
+
+            {/* Candidates List - Scrollable */}
+            <div className="flex-1 overflow-y-auto">
+              {activeChatId ? (
+                <CandidateSearchSection />
+              ) : (
+                <div className="p-4 text-center text-gray-500">
+                  <p className="text-sm">Start a new job search to see matching candidates</p>
+                </div>
+              )}
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
