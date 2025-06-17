@@ -9,6 +9,7 @@ const corsHeaders = {
 interface AIResponse {
   message_type: 'job_description' | 'chat_message' | 'search_refinement' | 'resume_analysis'
   extracted_job_description?: string
+  extracted_job_title?: string
   ai_response_text: string
   trigger_resume_matching?: boolean
 }
@@ -110,6 +111,7 @@ CRITICAL INSTRUCTIONS:
 {
   "message_type": "job_description" | "chat_message" | "search_refinement" | "resume_analysis",
   "extracted_job_description": "string (only if message_type is job_description)",
+  "extracted_job_title": "string (only if message_type is job_description - extract the role/position name)",
   "ai_response_text": "your conversational response to the user",
   "trigger_resume_matching": boolean (true only when user explicitly requests candidate search)
 }
@@ -132,7 +134,16 @@ Look for these indicators of a job description:
 - Location or remote work details
 - Structured job posting format
 
-4. RESUME MATCHING TRIGGERS:
+4. JOB TITLE EXTRACTION:
+When message_type is "job_description", you MUST extract the job title/role name:
+- Look for explicit job titles (e.g., "Senior Frontend Developer", "Product Manager", "Data Scientist")
+- If multiple roles mentioned, pick the primary/main role
+- If no explicit title, infer from context (e.g., "React developer with 5 years experience" → "React Developer")
+- Keep titles concise but descriptive (max 50 characters)
+- Examples of good titles: "Senior React Developer", "Full Stack Engineer", "DevOps Engineer", "Product Manager"
+- If you cannot determine a specific role, use "Software Developer" or "Technical Role" as fallback
+
+5. RESUME MATCHING TRIGGERS:
 ONLY set "trigger_resume_matching" to true when the user EXPLICITLY requests candidate search with phrases like:
 - "find candidates", "search for candidates", "show me candidates"
 - "analyze resumes", "match resumes", "find matches"
@@ -142,13 +153,13 @@ ONLY set "trigger_resume_matching" to true when the user EXPLICITLY requests can
 
 NEVER trigger resume matching automatically when a job description is provided. Only trigger when explicitly requested.
 
-5. EXTRACTED JOB DESCRIPTION:
+6. EXTRACTED JOB DESCRIPTION:
 - If message_type is "job_description", extract and clean up the job requirements
 - Include all relevant details: skills, experience, responsibilities, qualifications
 - Format it clearly and professionally
 - If the user provides an unstructured description, structure it appropriately
 
-6. AI RESPONSE GUIDELINES:
+7. AI RESPONSE GUIDELINES:
 - You are assisting a hiring manager or sourcing specialist - NEVER respond from a candidate perspective
 - Be professional, helpful, and focused on recruitment tasks from the employer's viewpoint
 - When a job description is saved, acknowledge it and offer to search for candidates when ready
@@ -159,9 +170,10 @@ NEVER trigger resume matching automatically when a job description is provided. 
 - Provide insights on hiring trends and best practices
 - Help create compelling job descriptions and postings
 
-7. WORKFLOW GUIDANCE:
+8. WORKFLOW GUIDANCE:
 When a job description is provided:
 - Save it and acknowledge receipt
+- Extract the job title for the chat title
 - Summarize the key requirements
 - Ask if they want to search for candidates now or refine requirements first
 - Offer to help with additional job details if needed
@@ -171,14 +183,14 @@ When user wants to search:
 - Set trigger_resume_matching to true
 - Explain what the search will analyze
 
-8. IMPORTANT RESTRICTIONS:
+9. IMPORTANT RESTRICTIONS:
 - NEVER offer assistance with interview preparation from a candidate's perspective
 - NEVER provide advice on how candidates should prepare for interviews
 - NEVER suggest ways for candidates to improve their resumes or applications
 - Focus exclusively on helping employers find, evaluate, and hire candidates
 - If asked about interview preparation, redirect to employer-focused interview strategies instead
 
-9. RESUME MATCHING CONTEXT:
+10. RESUME MATCHING CONTEXT:
 When appropriate, mention that the system can:
 - Analyze resumes against job requirements using a 4-factor scoring system
 - Provide detailed match scores (75%+ threshold for recommendations)
@@ -218,24 +230,40 @@ REMEMBER: Always respond in valid JSON format. Do not include any text outside t
       }
     }
 
-    // Update job description in chat if detected
-    if (parsedResponse.message_type === 'job_description' && parsedResponse.extracted_job_description) {
+    // Update job description and title in chat if detected
+    let titleUpdated = false
+    if (parsedResponse.message_type === 'job_description') {
       try {
+        const updateData: any = {
+          updated_at: new Date().toISOString()
+        }
+
+        // Update job description if provided
+        if (parsedResponse.extracted_job_description) {
+          updateData.job_description = parsedResponse.extracted_job_description
+        }
+
+        // Update title if job title was extracted
+        if (parsedResponse.extracted_job_title) {
+          updateData.title = parsedResponse.extracted_job_title
+          titleUpdated = true
+        }
+
         const { error: updateError } = await supabaseClient
           .from('chats')
-          .update({ 
-            job_description: parsedResponse.extracted_job_description,
-            updated_at: new Date().toISOString()
-          })
+          .update(updateData)
           .eq('id', chatId)
 
         if (updateError) {
-          console.error('Error updating job description:', updateError)
+          console.error('Error updating chat:', updateError)
         } else {
-          console.log('Successfully updated job description for chat:', chatId)
+          console.log('Successfully updated chat for:', chatId)
+          if (titleUpdated) {
+            console.log('Updated title to:', parsedResponse.extracted_job_title)
+          }
         }
       } catch (updateError) {
-        console.error('Error updating chat with job description:', updateError)
+        console.error('Error updating chat:', updateError)
       }
     }
 
@@ -266,6 +294,8 @@ REMEMBER: Always respond in valid JSON format. Do not include any text outside t
       JSON.stringify({ 
         message: aiMessage,
         job_description_updated: parsedResponse.message_type === 'job_description' && parsedResponse.extracted_job_description ? true : false,
+        title_updated: titleUpdated,
+        new_title: parsedResponse.extracted_job_title || null,
         trigger_resume_matching: parsedResponse.trigger_resume_matching || false,
         job_description: chat.job_description || parsedResponse.extracted_job_description
       }),

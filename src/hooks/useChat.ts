@@ -125,10 +125,25 @@ export const useChat = (userId: string | undefined) => {
         throw new Error('Failed to get AI response')
       }
 
-      const { message: aiMessage, trigger_resume_matching, job_description } = await response.json()
+      const { 
+        message: aiMessage, 
+        trigger_resume_matching, 
+        job_description,
+        title_updated,
+        new_title
+      } = await response.json()
       
       // Add AI message to local state
       setMessages(prev => [...prev, aiMessage])
+
+      // Update chat title in local state if it was updated
+      if (title_updated && new_title) {
+        setChats(prev => prev.map(chat => 
+          chat.id === activeChatId 
+            ? { ...chat, title: new_title }
+            : chat
+        ))
+      }
 
       // Trigger resume matching if requested
       if (trigger_resume_matching && job_description) {
