@@ -99,6 +99,8 @@ serve(async (req) => {
       return new Response(
         JSON.stringify({ 
           matches: [],
+          total_candidates_analyzed: 0,
+          qualifying_matches: 0,
           message: 'No candidates with processed resumes found in the database.'
         }),
         { 
@@ -107,35 +109,84 @@ serve(async (req) => {
       )
     }
 
-    // Analyze each candidate against the job description
+    console.log(`Starting analysis of ${candidates.length} candidates`)
+    const startTime = Date.now()
+
+    // Step 1: Extract keywords from job description for preliminary filtering
+    const jobKeywords = extractKeywords(job_description)
+    console.log(`Extracted ${jobKeywords.length} keywords from job description`)
+
+    // Step 2: Preliminary keyword filtering
+    const filteredCandidates = candidates.filter(candidate => {
+      const resumeText = extractResumeText(candidate.extracted_data)
+      if (!resumeText) return false
+      
+      const keywordScore = calculateKeywordScore(resumeText, jobKeywords)
+      // Only proceed with candidates that have at least 20% keyword match
+      return keywordScore >= 0.2
+    })
+
+    console.log(`Filtered to ${filteredCandidates.length} candidates after keyword screening`)
+
+    if (filteredCandidates.length === 0) {
+      return new Response(
+        JSON.stringify({ 
+          matches: [],
+          total_candidates_analyzed: candidates.length,
+          qualifying_matches: 0,
+          message: 'No candidates passed the initial keyword screening.'
+        }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      )
+    }
+
+    // Step 3: Parallel AI analysis with concurrency control
+    const BATCH_SIZE = 5 // Process 5 candidates at a time to avoid rate limits
     const matchResults: MatchResult[] = []
 
-    for (const candidate of candidates) {
-      try {
-        const resumeText = extractResumeText(candidate.extracted_data)
-        if (!resumeText) {
-          console.log(`Skipping candidate ${candidate.name} - no resume text found`)
-          continue
+    for (let i = 0; i < filteredCandidates.length; i += BATCH_SIZE) {
+      const batch = filteredCandidates.slice(i, i + BATCH_SIZE)
+      console.log(`Processing batch ${Math.floor(i / BATCH_SIZE) + 1}/${Math.ceil(filteredCandidates.length / BATCH_SIZE)}`)
+      
+      // Process batch in parallel
+      const batchPromises = batch.map(candidate => 
+        analyzeCandidateWithRetry(openaiApiKey, job_description, candidate, 2)
+      )
+      
+      const batchResults = await Promise.allSettled(batchPromises)
+      
+      // Collect successful results
+      batchResults.forEach((result, index) => {
+        if (result.status === 'fulfilled' && result.value && result.value.match_score >= 75) {
+          matchResults.push(result.value)
+        } else if (result.status === 'rejected') {
+          console.error(`Failed to analyze candidate ${batch[index].name}:`, result.reason)
         }
+      })
 
-        const analysis = await analyzeCandidate(openaiApiKey, job_description, resumeText, candidate)
-        if (analysis && analysis.match_score >= 75) {
-          matchResults.push(analysis)
-        }
-      } catch (error) {
-        console.error(`Error analyzing candidate ${candidate.name}:`, error)
-        // Continue with other candidates
+      // Small delay between batches to be respectful to API limits
+      if (i + BATCH_SIZE < filteredCandidates.length) {
+        await new Promise(resolve => setTimeout(resolve, 500))
       }
     }
 
     // Sort by match score (highest first)
     matchResults.sort((a, b) => b.match_score - a.match_score)
 
+    const endTime = Date.now()
+    const processingTime = (endTime - startTime) / 1000
+
+    console.log(`Analysis completed in ${processingTime}s. Found ${matchResults.length} qualifying matches.`)
+
     return new Response(
       JSON.stringify({ 
         matches: matchResults,
         total_candidates_analyzed: candidates.length,
-        qualifying_matches: matchResults.length
+        candidates_after_filtering: filteredCandidates.length,
+        qualifying_matches: matchResults.length,
+        processing_time_seconds: processingTime
       }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
@@ -153,6 +204,90 @@ serve(async (req) => {
     )
   }
 })
+
+function extractKeywords(jobDescription: string): string[] {
+  // Convert to lowercase for case-insensitive matching
+  const text = jobDescription.toLowerCase()
+  
+  // Common technical skills and keywords to look for
+  const technicalKeywords = [
+    // Programming languages
+    'javascript', 'typescript', 'python', 'java', 'c++', 'c#', 'php', 'ruby', 'go', 'rust', 'swift', 'kotlin',
+    // Frontend technologies
+    'react', 'vue', 'angular', 'html', 'css', 'sass', 'less', 'bootstrap', 'tailwind',
+    // Backend technologies
+    'node.js', 'express', 'django', 'flask', 'spring', 'laravel', 'rails',
+    // Databases
+    'postgresql', 'mysql', 'mongodb', 'redis', 'elasticsearch', 'sql',
+    // Cloud platforms
+    'aws', 'azure', 'gcp', 'google cloud', 'docker', 'kubernetes',
+    // Tools and frameworks
+    'git', 'jenkins', 'webpack', 'vite', 'babel', 'jest', 'cypress',
+    // Methodologies
+    'agile', 'scrum', 'devops', 'ci/cd', 'tdd', 'microservices'
+  ]
+  
+  // Extract years of experience
+  const experiencePatterns = [
+    /(\d+)\+?\s*years?\s*(of\s*)?(experience|exp)/gi,
+    /(\d+)\+?\s*yrs?\s*(of\s*)?(experience|exp)/gi,
+    /(senior|lead|principal|staff)/gi,
+    /(junior|entry.level|graduate)/gi
+  ]
+  
+  const foundKeywords = new Set<string>()
+  
+  // Find technical keywords
+  technicalKeywords.forEach(keyword => {
+    if (text.includes(keyword)) {
+      foundKeywords.add(keyword)
+    }
+  })
+  
+  // Extract experience-related terms
+  experiencePatterns.forEach(pattern => {
+    const matches = text.match(pattern)
+    if (matches) {
+      matches.forEach(match => foundKeywords.add(match.toLowerCase()))
+    }
+  })
+  
+  // Extract other important words (nouns, adjectives)
+  const words = text.match(/\b[a-z]{3,}\b/g) || []
+  const importantWords = words.filter(word => 
+    !['the', 'and', 'for', 'are', 'but', 'not', 'you', 'all', 'can', 'had', 'her', 'was', 'one', 'our', 'out', 'day', 'get', 'has', 'him', 'his', 'how', 'man', 'new', 'now', 'old', 'see', 'two', 'way', 'who', 'boy', 'did', 'its', 'let', 'put', 'say', 'she', 'too', 'use'].includes(word)
+  )
+  
+  // Add most frequent important words
+  const wordFreq = new Map<string, number>()
+  importantWords.forEach(word => {
+    wordFreq.set(word, (wordFreq.get(word) || 0) + 1)
+  })
+  
+  // Add words that appear more than once
+  Array.from(wordFreq.entries())
+    .filter(([_, count]) => count > 1)
+    .sort(([_, a], [__, b]) => b - a)
+    .slice(0, 20) // Top 20 most frequent words
+    .forEach(([word, _]) => foundKeywords.add(word))
+  
+  return Array.from(foundKeywords)
+}
+
+function calculateKeywordScore(resumeText: string, keywords: string[]): number {
+  if (keywords.length === 0) return 0
+  
+  const resumeLower = resumeText.toLowerCase()
+  let matchCount = 0
+  
+  keywords.forEach(keyword => {
+    if (resumeLower.includes(keyword)) {
+      matchCount++
+    }
+  })
+  
+  return matchCount / keywords.length
+}
 
 function extractResumeText(extractedData: any): string {
   if (!extractedData) return ''
@@ -191,13 +326,51 @@ function extractResumeText(extractedData: any): string {
   return combinedText.trim()
 }
 
+async function analyzeCandidateWithRetry(
+  apiKey: string, 
+  jobDescription: string, 
+  candidate: any,
+  maxRetries: number = 2
+): Promise<MatchResult | null> {
+  let lastError: Error | null = null
+  
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      const result = await analyzeCandidate(apiKey, jobDescription, candidate)
+      if (result) return result
+    } catch (error) {
+      lastError = error as Error
+      console.warn(`Attempt ${attempt + 1} failed for candidate ${candidate.name}:`, error)
+      
+      // Wait before retry (exponential backoff)
+      if (attempt < maxRetries) {
+        await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 1000))
+      }
+    }
+  }
+  
+  console.error(`Failed to analyze candidate ${candidate.name} after ${maxRetries + 1} attempts:`, lastError)
+  return null
+}
+
 async function analyzeCandidate(
   apiKey: string, 
   jobDescription: string, 
-  resumeText: string, 
   candidate: any
 ): Promise<MatchResult | null> {
   try {
+    const resumeText = extractResumeText(candidate.extracted_data)
+    if (!resumeText) {
+      console.log(`Skipping candidate ${candidate.name} - no resume text found`)
+      return null
+    }
+
+    // Truncate very long resumes to optimize processing time
+    const maxResumeLength = 8000 // characters
+    const truncatedResumeText = resumeText.length > maxResumeLength 
+      ? resumeText.substring(0, maxResumeLength) + '...[truncated]'
+      : resumeText
+
     const systemPrompt = `You are an expert resume matching system. Analyze the provided resume against the job description using the following scoring framework:
 
 SCORING FRAMEWORK (Total: 100 points):
@@ -258,18 +431,18 @@ Analyze thoroughly but be realistic in scoring. Focus on quality matches over qu
           },
           {
             role: 'user',
-            content: `JOB DESCRIPTION:\n${jobDescription}\n\nRESUME TEXT:\n${resumeText}`
+            content: `JOB DESCRIPTION:\n${jobDescription}\n\nRESUME TEXT:\n${truncatedResumeText}`
           }
         ],
-        max_tokens: 2000,
+        max_tokens: 1500, // Reduced from 2000 for faster processing
         temperature: 0.1,
         response_format: { type: "json_object" }
       })
     })
 
     if (!response.ok) {
-      console.error('OpenAI API error:', response.status)
-      return null
+      const errorText = await response.text()
+      throw new Error(`OpenAI API error: ${response.status} - ${errorText}`)
     }
 
     const data = await response.json()
@@ -289,6 +462,6 @@ Analyze thoroughly but be realistic in scoring. Focus on quality matches over qu
 
   } catch (error) {
     console.error('Error analyzing candidate:', error)
-    return null
+    throw error // Re-throw to be handled by retry logic
   }
 }
