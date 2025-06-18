@@ -1,4 +1,4 @@
-import { SendIcon, PaperclipIcon, LogOutIcon, ChevronLeftIcon, ChevronRightIcon, DatabaseIcon } from "lucide-react";
+import { SendIcon, PaperclipIcon, LogOutIcon, ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
 import React, { useState } from "react";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
@@ -7,13 +7,11 @@ import { JobDescriptionSection } from "./sections/JobDescriptionSection";
 import { MatchingCandidatesSection } from "./sections/MatchingCandidatesSection";
 import { useAuth } from "../../hooks/useAuth";
 import { useChat } from "../../hooks/useChat";
-import { createSampleCandidates, clearAllCandidates } from "../../utils/sampleData";
 
 export const FigmaDesign = (): JSX.Element => {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isCandidatesCollapsed, setIsCandidatesCollapsed] = useState(false);
   const [messageInput, setMessageInput] = useState("");
-  const [creatingData, setCreatingData] = useState(false);
   const { user, userProfile, signOut } = useAuth();
   
   const {
@@ -69,40 +67,6 @@ export const FigmaDesign = (): JSX.Element => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSendMessage(e as any);
-    }
-  };
-
-  const handleCreateSampleData = async () => {
-    setCreatingData(true);
-    try {
-      const result = await createSampleCandidates();
-      if (result.success) {
-        alert('Sample candidates created successfully! You can now test the resume matching system.');
-      } else {
-        alert('Error creating sample data: ' + (result.error?.message || 'Unknown error'));
-      }
-    } catch (error) {
-      alert('Error creating sample data: ' + error);
-    } finally {
-      setCreatingData(false);
-    }
-  };
-
-  const handleClearData = async () => {
-    if (confirm('Are you sure you want to clear all candidate data? This cannot be undone.')) {
-      setCreatingData(true);
-      try {
-        const result = await clearAllCandidates();
-        if (result.success) {
-          alert('All candidate data cleared successfully!');
-        } else {
-          alert('Error clearing data: ' + (result.error?.message || 'Unknown error'));
-        }
-      } catch (error) {
-        alert('Error clearing data: ' + error);
-      } finally {
-        setCreatingData(false);
-      }
     }
   };
 
@@ -260,43 +224,15 @@ export const FigmaDesign = (): JSX.Element => {
             </div>
             
             {/* Action Buttons */}
-            <div className="p-4 border-b border-gray-200 flex-shrink-0 space-y-2">
-              <div className="flex gap-2">
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  className="flex-1"
-                  disabled={!hasMatches}
-                >
-                  Export Results
-                </Button>
-              </div>
-              
-              {/* Sample Data Controls */}
-              <div className="pt-2 border-t border-gray-100">
-                <p className="text-xs text-gray-500 mb-2">Test the system:</p>
-                <div className="flex gap-2">
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={handleCreateSampleData}
-                    disabled={creatingData}
-                    className="flex-1 text-xs"
-                  >
-                    <DatabaseIcon className="h-3 w-3 mr-1" />
-                    {creatingData ? 'Creating...' : 'Add Sample Data'}
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={handleClearData}
-                    disabled={creatingData}
-                    className="text-xs text-red-600 hover:text-red-700"
-                  >
-                    Clear
-                  </Button>
-                </div>
-              </div>
+            <div className="p-4 border-b border-gray-200 flex-shrink-0">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="w-full"
+                disabled={!hasMatches}
+              >
+                Export Results
+              </Button>
             </div>
 
             {/* Candidates List - Scrollable */}
