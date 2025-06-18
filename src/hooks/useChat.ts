@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase, chatOperations, messageOperations, Chat, ChatMessage } from '../lib/supabase'
 import { useResumeMatching } from './useResumeMatching'
-import { extractTextFromPDF, isPDFFile } from '../lib/pdfExtractor'
 
 export const useChat = (userId: string | undefined) => {
   const [chats, setChats] = useState<Chat[]>([])
@@ -101,79 +100,54 @@ export const useChat = (userId: string | undefined) => {
     setUploadingFile(true)
     
     try {
-      let extractedText = ''
-      
-      // Handle different file types
-      if (file.type === 'text/plain') {
-        // Handle text files directly
-        extractedText = await file.text()
-        
-      } else if (isPDFFile(file)) {
-        // Handle PDF files using client-side extraction
-        setParsingFile(true)
-        
-        const pdfResult = await extractTextFromPDF(file)
-        
-        if (!pdfResult.success) {
-          throw new Error(pdfResult.error || 'Failed to extract text from PDF')
+      // Convert file to base64 using FileReader to avoid call stack overflow
+      const base64String = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader()
+        reader.onload = () => {
+          const result = reader.result as string
+          // Extract base64 part from data URL (remove "data:type;base64," prefix)
+          const base64 = result.split(',')[1]
+          resolve(base64)
         }
-        
-        extractedText = pdfResult.text
-        
-      } else {
-        // For DOCX and other files, use the edge function
-        setParsingFile(true)
-        
-        // Convert file to base64 using FileReader to avoid call stack overflow
-        const base64String = await new Promise<string>((resolve, reject) => {
-          const reader = new FileReader()
-          reader.onload = () => {
-            const result = reader.result as string
-            // Extract base64 part from data URL (remove "data:type;base64," prefix)
-            const base64 = result.split(',')[1]
-            resolve(base64)
-          }
-          reader.onerror = () => reject(new Error('Failed to read file'))
-          reader.readAsDataURL(file)
-        })
+        reader.onerror = () => reject(new Error('Failed to read file'))
+        reader.readAsDataURL(file)
+      })
 
-        // Call the text extraction Edge Function
-        const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/job-description-extractor`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-          },
-          body: JSON.stringify({
-            file_content_base64: base64String,
-            file_type: file.type,
-            file_name: file.name,
-            chat_id: activeChatId,
-            user_id: userId
-          }),
-        })
+      // Call the text extraction Edge Function
+      setParsingFile(true)
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/job-description-extractor`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+        },
+        body: JSON.stringify({
+          file_content_base64: base64String,
+          file_type: file.type,
+          file_name: file.name,
+          chat_id: activeChatId,
+          user_id: userId
+        }),
+      })
 
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}))
-          throw new Error(errorData.error || `HTTP error! status: ${response.status}`)
-        }
-
-        const result = await response.json()
-        
-        if (!result.success) {
-          throw new Error(result.error || 'Failed to extract text from file')
-        }
-
-        extractedText = result.extracted_text
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.error || `HTTP error! status: ${response.status}`)
       }
 
-      // Validate extracted text
-      if (!extractedText || extractedText.trim().length < 10) {
-        throw new Error('No meaningful text could be extracted from the file')
+      const result = await response.json()
+      
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to extract text from file')
       }
 
       // Send the extracted text as a user message
-      await sendMessage(`Job Description from ${file.name}:\n\n${extractedText}`)
+      const extractedText = result.extracted_text
+      if (extractedText && extractedText.trim()) {
+        await sendMessage(`Job Description from ${file.name}:\n\n${extractedText}`)
+      } else {
+        throw new Error('No text could be extracted from the file')
+      }
 
       return { success: true }
 
