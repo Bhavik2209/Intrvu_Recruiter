@@ -100,10 +100,18 @@ export const useChat = (userId: string | undefined) => {
     setUploadingFile(true)
     
     try {
-      // Convert file to base64
-      const arrayBuffer = await file.arrayBuffer()
-      const uint8Array = new Uint8Array(arrayBuffer)
-      const base64String = btoa(String.fromCharCode(...uint8Array))
+      // Convert file to base64 using FileReader to avoid call stack overflow
+      const base64String = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader()
+        reader.onload = () => {
+          const result = reader.result as string
+          // Extract base64 part from data URL (remove "data:type;base64," prefix)
+          const base64 = result.split(',')[1]
+          resolve(base64)
+        }
+        reader.onerror = () => reject(new Error('Failed to read file'))
+        reader.readAsDataURL(file)
+      })
 
       // Call the text extraction Edge Function
       setParsingFile(true)
