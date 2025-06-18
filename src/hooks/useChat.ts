@@ -8,6 +8,8 @@ export const useChat = (userId: string | undefined) => {
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [loading, setLoading] = useState(true)
   const [sendingMessage, setSendingMessage] = useState(false)
+  const [uploadingFile, setUploadingFile] = useState(false)
+  const [parsingFile, setParsingFile] = useState(false)
   
   const { analyzeResumes, results: matchingResults, loading: matchingLoading } = useResumeMatching()
 
@@ -88,6 +90,70 @@ export const useChat = (userId: string | undefined) => {
       console.error('Error deleting chat:', error)
     }
   }, [activeChatId, chats])
+
+  // Upload and process job description file
+  const uploadJobDescriptionFile = useCallback(async (file: File): Promise<{ success: boolean; error?: string }> => {
+    if (!activeChatId || !userId) {
+      return { success: false, error: 'No active chat or user session' }
+    }
+
+    setUploadingFile(true)
+    
+    try {
+      // Convert file to base64
+      const arrayBuffer = await file.arrayBuffer()
+      const uint8Array = new Uint8Array(arrayBuffer)
+      const base64String = btoa(String.fromCharCode(...uint8Array))
+
+      // Call the text extraction Edge Function
+      setParsingFile(true)
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/job-description-extractor`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+        },
+        body: JSON.stringify({
+          file_content_base64: base64String,
+          file_type: file.type,
+          file_name: file.name,
+          chat_id: activeChatId,
+          user_id: userId
+        }),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.error || `HTTP error! status: ${response.status}`)
+      }
+
+      const result = await response.json()
+      
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to extract text from file')
+      }
+
+      // Send the extracted text as a user message
+      const extractedText = result.extracted_text
+      if (extractedText && extractedText.trim()) {
+        await sendMessage(`Job Description from ${file.name}:\n\n${extractedText}`)
+      } else {
+        throw new Error('No text could be extracted from the file')
+      }
+
+      return { success: true }
+
+    } catch (error) {
+      console.error('Error uploading job description file:', error)
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Failed to process file'
+      }
+    } finally {
+      setUploadingFile(false)
+      setParsingFile(false)
+    }
+  }, [activeChatId, userId])
 
   // Send message
   const sendMessage = useCallback(async (content: string) => {
@@ -195,10 +261,13 @@ export const useChat = (userId: string | undefined) => {
     messages,
     loading,
     sendingMessage,
+    uploadingFile,
+    parsingFile,
     createNewChat,
     updateChatTitle,
     deleteChat,
     sendMessage,
+    uploadJobDescriptionFile,
     matchingResults,
     matchingLoading,
   }

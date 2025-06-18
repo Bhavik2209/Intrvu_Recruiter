@@ -2,6 +2,7 @@ import { SendIcon, PaperclipIcon, LogOutIcon, ChevronLeftIcon, ChevronRightIcon 
 import React, { useState } from "react";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
+import { FileUploadArea } from "../../components/FileUploadArea";
 import { CandidateSearchSection } from "./sections/CandidateSearchSection";
 import { JobDescriptionSection } from "./sections/JobDescriptionSection";
 import { MatchingCandidatesSection } from "./sections/MatchingCandidatesSection";
@@ -12,6 +13,9 @@ export const FigmaDesign = (): JSX.Element => {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isCandidatesCollapsed, setIsCandidatesCollapsed] = useState(false);
   const [messageInput, setMessageInput] = useState("");
+  const [showFileUpload, setShowFileUpload] = useState(false);
+  const [fileUploadError, setFileUploadError] = useState("");
+  const [uploadStatus, setUploadStatus] = useState("");
   const { user, userProfile, signOut } = useAuth();
   
   const {
@@ -21,32 +25,60 @@ export const FigmaDesign = (): JSX.Element => {
     messages,
     loading,
     sendingMessage,
+    uploadingFile,
+    parsingFile,
     createNewChat,
     updateChatTitle,
     deleteChat,
     sendMessage,
+    uploadJobDescriptionFile,
     matchingResults,
     matchingLoading,
   } = useChat(user?.id);
 
   const handleFileUpload = () => {
-    // Create a hidden file input and trigger it
-    const fileInput = document.createElement('input');
-    fileInput.type = 'file';
-    fileInput.multiple = true;
-    fileInput.accept = '.pdf,.doc,.docx,.txt,.jpg,.jpeg,.png';
-    fileInput.onchange = (e) => {
-      const files = (e.target as HTMLInputElement).files;
-      if (files) {
-        console.log('Files selected:', Array.from(files).map(f => f.name));
-        // Handle file upload logic here
-      }
-    };
-    fileInput.click();
+    setShowFileUpload(true);
+    setFileUploadError("");
+    setUploadStatus("");
   };
 
   const handleSignOut = async () => {
     await signOut();
+  };
+
+  const handleJobDescriptionUpload = async (file: File) => {
+    setFileUploadError("");
+    setUploadStatus("JD uploaded successfully.");
+    
+    // If no active chat, create one first
+    if (!activeChatId) {
+      const newChat = await createNewChat("New Job Search");
+      if (!newChat) {
+        setFileUploadError("Failed to create new chat");
+        setUploadStatus("");
+        return;
+      }
+    }
+
+    try {
+      const result = await uploadJobDescriptionFile(file);
+      
+      if (!result.success) {
+        setFileUploadError(result.error || "Unable to process the file. Please check the content and try again.");
+        setUploadStatus("");
+      } else {
+        setUploadStatus("");
+        setShowFileUpload(false);
+      }
+    } catch (error) {
+      setFileUploadError("Unable to process the file. Please check the content and try again.");
+      setUploadStatus("");
+    }
+  };
+
+  const handleFileUploadError = (error: string) => {
+    setFileUploadError(error);
+    setUploadStatus("");
   };
 
   const handleSendMessage = async (e: React.FormEvent) => {
@@ -73,6 +105,15 @@ export const FigmaDesign = (): JSX.Element => {
   const displayName = userProfile?.name || user?.email || 'User';
   const candidateCount = matchingResults?.matches?.length || 0;
   const hasMatches = candidateCount > 0;
+
+  // Determine current processing status
+  const getProcessingStatus = () => {
+    if (uploadingFile) return "Uploading file...";
+    if (parsingFile) return "Parsing now...";
+    return "";
+  };
+
+  const processingStatus = getProcessingStatus();
 
   return (
     <div className="bg-gray-50 h-screen flex overflow-hidden">
@@ -123,6 +164,56 @@ export const FigmaDesign = (): JSX.Element => {
           </div>
         </div>
 
+        {/* File Upload Area */}
+        {showFileUpload && (
+          <div className="p-4 bg-white border-b border-gray-200">
+            <div className="max-w-2xl mx-auto">
+              <FileUploadArea
+                onFileSelect={handleJobDescriptionUpload}
+                onError={handleFileUploadError}
+                isLoading={uploadingFile || parsingFile}
+              />
+              
+              {/* Status Messages */}
+              {uploadStatus && (
+                <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-md">
+                  <p className="text-sm text-green-700">{uploadStatus}</p>
+                </div>
+              )}
+              
+              {processingStatus && (
+                <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-md">
+                  <div className="flex items-center">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500 mr-2"></div>
+                    <p className="text-sm text-blue-700">{processingStatus}</p>
+                  </div>
+                </div>
+              )}
+              
+              {fileUploadError && (
+                <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-md">
+                  <p className="text-sm text-red-700">{fileUploadError}</p>
+                </div>
+              )}
+              
+              <div className="mt-3 flex justify-end">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setShowFileUpload(false);
+                    setFileUploadError("");
+                    setUploadStatus("");
+                  }}
+                  disabled={uploadingFile || parsingFile}
+                >
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Chat Area - Scrollable */}
         <div className="flex-1 overflow-y-auto p-4">
           <JobDescriptionSection 
@@ -142,7 +233,8 @@ export const FigmaDesign = (): JSX.Element => {
                 size="icon"
                 onClick={handleFileUpload}
                 className="h-8 w-8 text-gray-500 hover:text-gray-700 hover:bg-gray-200 rounded-full flex-shrink-0"
-                title="Attach files"
+                title="Upload job description file"
+                disabled={uploadingFile || parsingFile}
               >
                 <PaperclipIcon className="h-4 w-4" />
               </Button>
@@ -156,13 +248,13 @@ export const FigmaDesign = (): JSX.Element => {
                     ? "Describe your job requirements, ask questions about candidates or refine your search..."
                     : "Start a new job search conversation..."
                 }
-                disabled={sendingMessage}
+                disabled={sendingMessage || uploadingFile || parsingFile}
               />
               <Button 
                 type="submit"
                 size="icon" 
                 className="bg-blue-500 hover:bg-blue-600 rounded-full flex-shrink-0"
-                disabled={sendingMessage || !messageInput.trim()}
+                disabled={sendingMessage || !messageInput.trim() || uploadingFile || parsingFile}
               >
                 <SendIcon className="h-4 w-4" />
               </Button>
