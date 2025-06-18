@@ -1,4 +1,3 @@
-// src/screens/Auth/SignIn.tsx - DEBUG VERSION
 import React, { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
@@ -149,11 +148,6 @@ export const SignIn = (): JSX.Element => {
                   Sign up
                 </Link>
               </p>
-            </div>
-
-            {/* Debug info */}
-            <div className="mt-4 p-3 bg-gray-100 rounded text-xs">
-              <p>Debug: Check browser console for detailed logs</p>
             </div>
           </CardContent>
         </Card>
