@@ -14,7 +14,7 @@ export const FigmaDesign = (): JSX.Element => {
   const [isCandidatesCollapsed, setIsCandidatesCollapsed] = useState(false);
   const [messageInput, setMessageInput] = useState("");
   const [creatingData, setCreatingData] = useState(false);
-  const { user, signOut } = useAuth();
+  const { user, userProfile, signOut } = useAuth();
   
   const {
     chats,
@@ -106,7 +106,7 @@ export const FigmaDesign = (): JSX.Element => {
     }
   };
 
-  const displayName = user?.email || 'User';
+  const displayName = userProfile?.name || user?.email || 'User';
   const candidateCount = matchingResults?.matches?.length || 0;
   const hasMatches = candidateCount > 0;
 

@@ -6,6 +6,7 @@ import { Input } from '../../components/ui/input'
 import { Card, CardContent } from '../../components/ui/card'
 
 export const SignUp = (): JSX.Element => {
+  const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
@@ -20,9 +21,15 @@ export const SignUp = (): JSX.Element => {
     setError('')
     setSuccess(false)
 
-    console.log('Sign up attempt for:', email)
+    console.log('Sign up attempt for:', email, 'with name:', name)
 
     // Validation
+    if (!name.trim()) {
+      setError('Please enter your full name')
+      setLoading(false)
+      return
+    }
+
     if (password !== confirmPassword) {
       setError('Passwords do not match')
       setLoading(false)
@@ -43,10 +50,15 @@ export const SignUp = (): JSX.Element => {
 
     try {
       console.log('Calling supabase signUp...')
-      // Sign up the user
+      // Sign up the user with name in metadata
       const { data, error: signUpError } = await supabase.auth.signUp({
         email,
         password,
+        options: {
+          data: {
+            name: name.trim()
+          }
+        }
       })
 
       console.log('Sign up response:', { data, error: signUpError })
@@ -109,7 +121,7 @@ export const SignUp = (): JSX.Element => {
               </div>
               <h2 className="text-2xl font-bold text-gray-900 mb-2">Account Created!</h2>
               <p className="text-gray-600 mb-4">
-                Your account has been successfully created. Welcome to IntrvuRecruiter!
+                Welcome to IntrvuRecruiter, {name}! Your account has been successfully created.
               </p>
               <p className="text-sm text-gray-500">Redirecting to dashboard...</p>
             </CardContent>
@@ -135,6 +147,21 @@ export const SignUp = (): JSX.Element => {
                   {error}
                 </div>
               )}
+
+              <div>
+                <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
+                  Full Name *
+                </label>
+                <Input
+                  id="name"
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Enter your full name"
+                  required
+                  className="w-full"
+                />
+              </div>
 
               <div>
                 <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">

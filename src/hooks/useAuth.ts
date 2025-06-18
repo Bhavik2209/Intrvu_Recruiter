@@ -108,11 +108,14 @@ export const useAuth = () => {
         
         try {
           const { data: user } = await supabase.auth.getUser()
+          const userName = user.user?.user_metadata?.name || ''
+          
           const { data: newProfile, error: insertError } = await supabase
             .from('users')
             .insert({
               id: userId,
-              email: user.user?.email || ''
+              email: user.user?.email || '',
+              name: userName
             })
             .select()
             .single()
