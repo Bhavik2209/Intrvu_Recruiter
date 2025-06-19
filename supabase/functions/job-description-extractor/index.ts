@@ -1,6 +1,5 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { getTextExtractor } from 'npm:office-text-extractor@3.0.1'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -92,48 +91,109 @@ serve(async (req) => {
         }
         
       } else if (file_type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
-        // Handle .docx files using office-text-extractor
+        // Handle .docx files with multiple extraction methods
         try {
-          console.log('Extracting text from DOCX using office-text-extractor...')
+          console.log('Extracting text from DOCX using mammoth library...')
           
-          const extractor = getTextExtractor()
-          const text = await extractor.extractText({ input: binaryData, type: 'buffer' })
-          extractedText = text
+          // Try mammoth library first (best for DOCX)
+          const mammoth = await import('npm:mammoth@1.6.0')
+          const result = await mammoth.extractRawText({ buffer: binaryData })
+          extractedText = result.value
           
-          console.log(`Successfully extracted ${extractedText.length} characters from DOCX`)
+          console.log(`Successfully extracted ${extractedText.length} characters from DOCX using mammoth`)
           
-          // If no meaningful text extracted, provide a helpful message
+          // If no meaningful text extracted, try alternative method
           if (!extractedText || extractedText.trim().length < 20) {
-            extractedText = `DOCX file "${file_name}" was processed but appears to contain minimal text content. Please check the document or try a different format.`
+            throw new Error('Mammoth extraction yielded insufficient text')
           }
           
-        } catch (docxError) {
-          console.error('DOCX parsing error with office-text-extractor:', docxError)
+        } catch (mammothError) {
+          console.error('DOCX parsing error with mammoth:', mammothError)
           
-          // Fallback to basic DOCX extraction
+          // Try pizzip + docxtemplater approach
           try {
-            console.log('Falling back to basic DOCX text extraction...')
-            const textDecoder = new TextDecoder('utf-8', { fatal: false })
-            const docxText = textDecoder.decode(binaryData)
+            console.log('Trying alternative DOCX extraction with pizzip...')
             
-            // Look for text content patterns in DOCX XML
-            const xmlTextMatches = docxText.match(/<w:t[^>]*>([^<]+)<\/w:t>/g)
-            if (xmlTextMatches && xmlTextMatches.length > 0) {
-              extractedText = xmlTextMatches
-                .map(match => match.replace(/<[^>]+>/g, ''))
-                .filter(text => text.trim().length > 0)
-                .join(' ')
-                .replace(/\s+/g, ' ')
-                .trim()
+            const PizZip = (await import('npm:pizzip@3.1.6')).default
+            
+            // Load the docx file as a zip
+            const zip = new PizZip(binaryData)
+            
+            // Extract document.xml which contains the main text content
+            const documentXml = zip.file('word/document.xml')?.asText()
+            
+            if (documentXml) {
+              // Parse XML to extract text content
+              const textMatches = documentXml.match(/<w:t[^>]*>([^<]*)<\/w:t>/g)
+              if (textMatches && textMatches.length > 0) {
+                extractedText = textMatches
+                  .map(match => {
+                    // Extract text between tags and decode XML entities
+                    const text = match.replace(/<w:t[^>]*>([^<]*)<\/w:t>/, '$1')
+                    return text
+                      .replace(/&lt;/g, '<')
+                      .replace(/&gt;/g, '>')
+                      .replace(/&amp;/g, '&')
+                      .replace(/&quot;/g, '"')
+                      .replace(/&apos;/g, "'")
+                  })
+                  .filter(text => text.trim().length > 0)
+                  .join(' ')
+                
+                console.log(`Successfully extracted ${extractedText.length} characters from DOCX using pizzip`)
+              }
             }
             
-            if (!extractedText || extractedText.length < 50) {
-              extractedText = `DOCX file "${file_name}" could not be parsed with available methods. Please try converting to .txt format or copy-paste the content manually.`
+            if (!extractedText || extractedText.trim().length < 20) {
+              throw new Error('PizZip extraction yielded insufficient text')
             }
             
-          } catch (fallbackError) {
-            console.error('Fallback DOCX extraction also failed:', fallbackError)
-            extractedText = `DOCX file "${file_name}" could not be processed. Please convert to .txt format or copy-paste the job description manually.`
+          } catch (pizzipError) {
+            console.error('DOCX parsing error with pizzip:', pizzipError)
+            
+            // Final fallback to basic XML parsing
+            try {
+              console.log('Falling back to basic DOCX XML parsing...')
+              const textDecoder = new TextDecoder('utf-8', { fatal: false })
+              const docxText = textDecoder.decode(binaryData)
+              
+              // Look for text content patterns in DOCX XML
+              const xmlTextMatches = docxText.match(/<w:t[^>]*>([^<]+)<\/w:t>/g)
+              if (xmlTextMatches && xmlTextMatches.length > 0) {
+                extractedText = xmlTextMatches
+                  .map(match => match.replace(/<[^>]+>/g, ''))
+                  .filter(text => text.trim().length > 0)
+                  .join(' ')
+                  .replace(/\s+/g, ' ')
+                  .trim()
+              }
+              
+              // Also try to find paragraph content
+              const paragraphMatches = docxText.match(/<w:p[^>]*>.*?<\/w:p>/gs)
+              if (paragraphMatches && paragraphMatches.length > 0) {
+                const paragraphText = paragraphMatches
+                  .map(para => {
+                    const textInPara = para.match(/<w:t[^>]*>([^<]*)<\/w:t>/g)
+                    return textInPara ? textInPara.map(t => t.replace(/<[^>]+>/g, '')).join(' ') : ''
+                  })
+                  .filter(text => text.trim().length > 0)
+                  .join('\n')
+                
+                if (paragraphText.length > extractedText.length) {
+                  extractedText = paragraphText
+                }
+              }
+              
+              if (!extractedText || extractedText.length < 50) {
+                extractedText = `DOCX file "${file_name}" could not be parsed with available methods. The document may have complex formatting or be password protected. Please try converting to .txt format or copy-paste the content manually.`
+              } else {
+                console.log(`Successfully extracted ${extractedText.length} characters from DOCX using fallback method`)
+              }
+              
+            } catch (fallbackError) {
+              console.error('Fallback DOCX extraction also failed:', fallbackError)
+              extractedText = `DOCX file "${file_name}" could not be processed with any available method. Please convert to .txt format or copy-paste the job description manually.`
+            }
           }
         }
         
@@ -156,7 +216,40 @@ serve(async (req) => {
         extractedText = extractedText
           .replace(/\s+/g, ' ')
           .replace(/\n\s*\n/g, '\n')
+          .replace(/\r\n/g, '\n')
+          .replace(/\r/g, '\n')
           .trim()
+        
+        // Remove common DOCX artifacts
+        extractedText = extractedText
+          .replace(/\u0001/g, '') // Remove control characters
+          .replace(/\u0002/g, '')
+          .replace(/\u0003/g, '')
+          .replace(/\u0004/g, '')
+          .replace(/\u0005/g, '')
+          .replace(/\u0006/g, '')
+          .replace(/\u0007/g, '')
+          .replace(/\u0008/g, '')
+          .replace(/\u000B/g, '')
+          .replace(/\u000C/g, '')
+          .replace(/\u000E/g, '')
+          .replace(/\u000F/g, '')
+          .replace(/\u0010/g, '')
+          .replace(/\u0011/g, '')
+          .replace(/\u0012/g, '')
+          .replace(/\u0013/g, '')
+          .replace(/\u0014/g, '')
+          .replace(/\u0015/g, '')
+          .replace(/\u0016/g, '')
+          .replace(/\u0017/g, '')
+          .replace(/\u0018/g, '')
+          .replace(/\u0019/g, '')
+          .replace(/\u001A/g, '')
+          .replace(/\u001B/g, '')
+          .replace(/\u001C/g, '')
+          .replace(/\u001D/g, '')
+          .replace(/\u001E/g, '')
+          .replace(/\u001F/g, '')
       }
 
       // Ensure we have some extracted text
