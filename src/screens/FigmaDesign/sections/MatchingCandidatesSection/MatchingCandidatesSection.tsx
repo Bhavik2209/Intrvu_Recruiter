@@ -165,90 +165,76 @@ export const MatchingCandidatesSection = ({
 
       {/* Search List - Scrollable */}
       <div className="flex-1 overflow-y-auto">
-        {chats.length === 0 ? (
-          <div className="p-4 text-center text-gray-500">
-            <p className="text-sm mb-4">No job searches yet</p>
-            <Button 
-              className="bg-blue-500 hover:bg-blue-600 text-white text-sm"
-              onClick={handleNewChat}
-              disabled={creatingChat}
-            >
-              <PlusIcon className="h-4 w-4 mr-2" />
-              Start Your First Search
-            </Button>
-          </div>
-        ) : (
-          chats.map((chat) => (
-            <div
-              key={chat.id}
-              className={`p-3 border-b border-gray-100 cursor-pointer hover:bg-gray-50 ${
-                chat.id === activeChatId ? "bg-blue-50 border-l-2 border-l-blue-500" : ""
-              }`}
-              onClick={() => editingId !== chat.id && onSelectChat(chat.id)}
-            >
-              <div className="flex items-center mb-1">
-                <div className="w-3 h-3 bg-gray-400 rounded-full mr-3 flex-shrink-0"></div>
-                
-                {editingId === chat.id ? (
-                  <input
-                    type="text"
-                    value={editingTitle}
-                    onChange={(e) => setEditingTitle(e.target.value)}
-                    onBlur={() => handleSaveRename(chat.id)}
-                    onKeyDown={(e) => handleKeyPress(e, chat.id)}
-                    className="flex-1 text-sm font-medium text-gray-800 bg-white border border-blue-300 rounded px-2 py-1 mr-2"
-                    autoFocus
-                    onClick={(e) => e.stopPropagation()}
-                  />
-                ) : (
-                  <span className="text-sm font-medium text-gray-800 truncate flex-1">
-                    {chat.title}
-                  </span>
-                )}
-
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      className="h-6 w-6 flex-shrink-0"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <MoreVerticalIcon className="h-3 w-3" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-40">
-                    <DropdownMenuItem
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleRename(chat.id, chat.title);
-                      }}
-                      className="text-sm"
-                    >
-                      <Edit2Icon className="h-3 w-3 mr-2" />
-                      Rename chat
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDelete(chat.id);
-                      }}
-                      className="text-sm text-red-600 hover:text-red-700 hover:bg-red-50"
-                    >
-                      <TrashIcon className="h-3 w-3 mr-2" />
-                      Delete chat
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-              <div className="ml-6">
-                <span className="text-xs text-gray-500">
-                  Last updated: {formatLastUpdated(chat.updated_at)}
+        {chats.map((chat) => (
+          <div
+            key={chat.id}
+            className={`p-3 border-b border-gray-100 cursor-pointer hover:bg-gray-50 ${
+              chat.id === activeChatId ? "bg-blue-50 border-l-2 border-l-blue-500" : ""
+            }`}
+            onClick={() => editingId !== chat.id && onSelectChat(chat.id)}
+          >
+            <div className="flex items-center mb-1">
+              <div className="w-3 h-3 bg-gray-400 rounded-full mr-3 flex-shrink-0"></div>
+              
+              {editingId === chat.id ? (
+                <input
+                  type="text"
+                  value={editingTitle}
+                  onChange={(e) => setEditingTitle(e.target.value)}
+                  onBlur={() => handleSaveRename(chat.id)}
+                  onKeyDown={(e) => handleKeyPress(e, chat.id)}
+                  className="flex-1 text-sm font-medium text-gray-800 bg-white border border-blue-300 rounded px-2 py-1 mr-2"
+                  autoFocus
+                  onClick={(e) => e.stopPropagation()}
+                />
+              ) : (
+                <span className="text-sm font-medium text-gray-800 truncate flex-1">
+                  {chat.title}
                 </span>
-              </div>
+              )}
+
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="h-6 w-6 flex-shrink-0"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <MoreVerticalIcon className="h-3 w-3" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-40">
+                  <DropdownMenuItem
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleRename(chat.id, chat.title);
+                    }}
+                    className="text-sm"
+                  >
+                    <Edit2Icon className="h-3 w-3 mr-2" />
+                    Rename chat
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDelete(chat.id);
+                    }}
+                    className="text-sm text-red-600 hover:text-red-700 hover:bg-red-50"
+                  >
+                    <TrashIcon className="h-3 w-3 mr-2" />
+                    Delete chat
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
-          ))
-        )}
+            <div className="ml-6">
+              <span className="text-xs text-gray-500">
+                Last updated: {formatLastUpdated(chat.updated_at)}
+              </span>
+            </div>
+          </div>
+        ))}
       </div>
     </>
   );

@@ -22,9 +22,17 @@ export const useChat = (userId: string | undefined) => {
       const userChats = await chatOperations.getUserChats(userId)
       setChats(userChats)
       
-      // If no active chat and chats exist, select the first one
-      if (!activeChatId && userChats.length > 0) {
-        setActiveChatId(userChats[0].id)
+      // If no chats exist, automatically create one for new users
+      if (userChats.length === 0) {
+        console.log('No chats found for user, creating initial chat...')
+        const newChat = await chatOperations.createChat(userId, 'New Job Search')
+        setChats([newChat])
+        setActiveChatId(newChat.id)
+      } else {
+        // If chats exist but no active chat, select the first one
+        if (!activeChatId) {
+          setActiveChatId(userChats[0].id)
+        }
       }
     } catch (error) {
       console.error('Error loading chats:', error)
@@ -81,15 +89,25 @@ export const useChat = (userId: string | undefined) => {
       await chatOperations.deleteChat(chatId)
       setChats(prev => prev.filter(chat => chat.id !== chatId))
       
-      // If deleted chat was active, select another one
+      // If deleted chat was active, select another one or create a new one
       if (activeChatId === chatId) {
         const remainingChats = chats.filter(chat => chat.id !== chatId)
-        setActiveChatId(remainingChats.length > 0 ? remainingChats[0].id : null)
+        if (remainingChats.length > 0) {
+          setActiveChatId(remainingChats[0].id)
+        } else {
+          // If no chats remain, create a new one automatically
+          const newChat = await createNewChat('New Job Search')
+          if (newChat) {
+            setActiveChatId(newChat.id)
+          } else {
+            setActiveChatId(null)
+          }
+        }
       }
     } catch (error) {
       console.error('Error deleting chat:', error)
     }
-  }, [activeChatId, chats])
+  }, [activeChatId, chats, createNewChat])
 
   // Upload and process job description file
   const uploadJobDescriptionFile = useCallback(async (file: File): Promise<{ success: boolean; error?: string }> => {
