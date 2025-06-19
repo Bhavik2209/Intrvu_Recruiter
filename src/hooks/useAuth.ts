@@ -145,34 +145,11 @@ export const useAuth = () => {
   const signOut = async () => {
     try {
       console.log('Signing out...')
-      setLoading(true)
-      
-      // Clear local state immediately
+      await supabase.auth.signOut()
       setUser(null)
       setUserProfile(null)
-      
-      // Sign out from Supabase
-      const { error } = await supabase.auth.signOut()
-      
-      if (error) {
-        console.error('Error signing out:', error)
-        // Even if there's an error, we've cleared local state
-        // This ensures the user appears signed out in the UI
-      } else {
-        console.log('Successfully signed out')
-      }
-      
-      // Clear any cached data
-      localStorage.removeItem('supabase.auth.token')
-      sessionStorage.clear()
-      
     } catch (error) {
-      console.error('Unexpected error during sign out:', error)
-      // Even if there's an error, clear local state
-      setUser(null)
-      setUserProfile(null)
-    } finally {
-      setLoading(false)
+      console.error('Error signing out:', error)
     }
   }
 

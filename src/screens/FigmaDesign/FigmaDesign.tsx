@@ -18,7 +18,6 @@ export const FigmaDesign = (): JSX.Element => {
   const [fileUploadError, setFileUploadError] = useState("");
   const [uploadStatus, setUploadStatus] = useState("");
   const [showWelcomePopup, setShowWelcomePopup] = useState(false);
-  const [signingOut, setSigningOut] = useState(false);
   const { user, userProfile, signOut } = useAuth();
   
   const {
@@ -60,18 +59,7 @@ export const FigmaDesign = (): JSX.Element => {
   };
 
   const handleSignOut = async () => {
-    if (signingOut) return; // Prevent multiple clicks
-    
-    try {
-      setSigningOut(true);
-      console.log('User clicked sign out');
-      await signOut();
-      console.log('Sign out completed');
-    } catch (error) {
-      console.error('Error during sign out:', error);
-    } finally {
-      setSigningOut(false);
-    }
+    await signOut();
   };
 
   const handleJobDescriptionUpload = async (file: File) => {
@@ -189,11 +177,10 @@ export const FigmaDesign = (): JSX.Element => {
                 variant="outline"
                 size="sm"
                 onClick={handleSignOut}
-                disabled={signingOut}
-                className="flex items-center gap-2 min-w-[100px]"
+                className="flex items-center gap-2"
               >
                 <LogOutIcon className="h-4 w-4" />
-                {signingOut ? 'Signing Out...' : 'Sign Out'}
+                Sign Out
               </Button>
             </div>
           </div>
