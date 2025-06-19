@@ -43,7 +43,7 @@ const AppRoutes = () => {
         } 
       />
       
-      {/* Catch all route */}
+      {/* Catch all route - redirect based on auth status */}
       <Route 
         path="*" 
         element={<Navigate to={user ? "/" : "/signin"} replace />} 
