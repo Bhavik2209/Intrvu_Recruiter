@@ -1,9 +1,8 @@
 import { SendIcon, PaperclipIcon, LogOutIcon, ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import { FileUploadArea } from "../../components/FileUploadArea";
-import { WelcomePopup } from "../../components/WelcomePopup";
 import { CandidateSearchSection } from "./sections/CandidateSearchSection";
 import { JobDescriptionSection } from "./sections/JobDescriptionSection";
 import { MatchingCandidatesSection } from "./sections/MatchingCandidatesSection";
@@ -17,7 +16,6 @@ export const FigmaDesign = (): JSX.Element => {
   const [showFileUpload, setShowFileUpload] = useState(false);
   const [fileUploadError, setFileUploadError] = useState("");
   const [uploadStatus, setUploadStatus] = useState("");
-  const [showWelcomePopup, setShowWelcomePopup] = useState(false);
   const { user, userProfile, signOut } = useAuth();
   
   const {
@@ -29,8 +27,6 @@ export const FigmaDesign = (): JSX.Element => {
     sendingMessage,
     uploadingFile,
     parsingFile,
-    isFirstChatEver,
-    markFirstChatSeen,
     createNewChat,
     updateChatTitle,
     deleteChat,
@@ -39,18 +35,6 @@ export const FigmaDesign = (): JSX.Element => {
     matchingResults,
     matchingLoading,
   } = useChat(user?.id);
-
-  // Show welcome popup when first chat is created
-  useEffect(() => {
-    if (isFirstChatEver) {
-      setShowWelcomePopup(true);
-    }
-  }, [isFirstChatEver]);
-
-  const handleWelcomePopupClose = () => {
-    setShowWelcomePopup(false);
-    markFirstChatSeen();
-  };
 
   const handleFileUpload = () => {
     setShowFileUpload(true);
@@ -133,12 +117,6 @@ export const FigmaDesign = (): JSX.Element => {
 
   return (
     <div className="bg-gray-50 h-screen flex overflow-hidden">
-      {/* Welcome Popup */}
-      <WelcomePopup 
-        isOpen={showWelcomePopup} 
-        onClose={handleWelcomePopupClose} 
-      />
-
       {/* Left Sidebar - Job Searches */}
       <div className={`${isSidebarCollapsed ? 'w-12' : 'w-[200px]'} bg-white border-r border-gray-200 flex flex-col transition-all duration-300 ease-in-out flex-shrink-0`}>
         <MatchingCandidatesSection 

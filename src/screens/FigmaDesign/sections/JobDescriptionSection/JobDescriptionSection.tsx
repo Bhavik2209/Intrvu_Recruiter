@@ -46,18 +46,19 @@ export const JobDescriptionSection = ({
           <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <span className="text-blue-500 text-2xl font-medium">AI</span>
           </div>
-          <h2 className="text-xl font-semibold text-gray-800 mb-2">Ready to Find Candidates</h2>
+          <h2 className="text-xl font-semibold text-gray-800 mb-2">Welcome to IntrvuRecruiter</h2>
           <p className="text-gray-600 mb-6 max-w-md">
-            Your job search conversation is ready. Start by describing your job requirements 
-            or uploading a job description to find matching candidates.
+            Start a new job search conversation to find the perfect candidates for your role. 
+            I'll help you analyze requirements and match them with our talent pool.
           </p>
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-left">
-            <h3 className="font-medium text-blue-800 mb-2">Quick start options:</h3>
+            <h3 className="font-medium text-blue-800 mb-2">I can help you with:</h3>
             <ul className="text-sm text-blue-700 space-y-1">
-              <li>• Type your job requirements in the message box</li>
-              <li>• Upload a job description file (PDF, DOCX, TXT)</li>
-              <li>• Ask me questions about hiring best practices</li>
-              <li>• Request candidate search and analysis</li>
+              <li>• Analyzing job requirements</li>
+              <li>• Finding matching candidates</li>
+              <li>• Evaluating candidate profiles</li>
+              <li>• Providing recruitment insights</li>
+              <li>• Answering hiring questions</li>
             </ul>
           </div>
         </div>

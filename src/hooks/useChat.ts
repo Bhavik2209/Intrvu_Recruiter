@@ -10,7 +10,6 @@ export const useChat = (userId: string | undefined) => {
   const [sendingMessage, setSendingMessage] = useState(false)
   const [uploadingFile, setUploadingFile] = useState(false)
   const [parsingFile, setParsingFile] = useState(false)
-  const [isFirstChatEver, setIsFirstChatEver] = useState(false)
   
   const { analyzeResumes, results: matchingResults, loading: matchingLoading } = useResumeMatching()
 
@@ -29,7 +28,6 @@ export const useChat = (userId: string | undefined) => {
         const newChat = await chatOperations.createChat(userId, 'New Job Search')
         setChats([newChat])
         setActiveChatId(newChat.id)
-        setIsFirstChatEver(true) // Mark this as the first chat ever
       } else {
         // If chats exist but no active chat, select the first one
         if (!activeChatId) {
@@ -110,11 +108,6 @@ export const useChat = (userId: string | undefined) => {
       console.error('Error deleting chat:', error)
     }
   }, [activeChatId, chats, createNewChat])
-
-  // Mark first chat as seen
-  const markFirstChatSeen = useCallback(() => {
-    setIsFirstChatEver(false)
-  }, [])
 
   // Upload and process job description file
   const uploadJobDescriptionFile = useCallback(async (file: File): Promise<{ success: boolean; error?: string }> => {
@@ -296,8 +289,6 @@ export const useChat = (userId: string | undefined) => {
     sendingMessage,
     uploadingFile,
     parsingFile,
-    isFirstChatEver,
-    markFirstChatSeen,
     createNewChat,
     updateChatTitle,
     deleteChat,
