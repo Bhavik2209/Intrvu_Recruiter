@@ -1,5 +1,6 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { getTextExtractor } from 'npm:office-text-extractor@3.0.1'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -43,61 +44,97 @@ serve(async (req) => {
         extractedText = textDecoder.decode(binaryData)
         
       } else if (file_type === 'application/pdf') {
-        // Handle .pdf files
+        // Handle .pdf files using pdf-parse library
         try {
-          // For PDF parsing, we'll use a simple approach
-          // In production, you might want to use a more robust PDF parser
-          const textDecoder = new TextDecoder('utf-8', { fatal: false })
-          const pdfText = textDecoder.decode(binaryData)
+          console.log('Extracting text from PDF using pdf-parse library...')
           
-          // Extract readable text patterns from PDF
-          // This is a basic approach - PDF parsing is complex
-          const textMatches = pdfText.match(/[A-Za-z\s\.\,\;\:\!\?\-\(\)]{20,}/g)
-          if (textMatches && textMatches.length > 0) {
-            extractedText = textMatches
-              .filter(match => match.trim().length > 10)
-              .join(' ')
-              .replace(/\s+/g, ' ')
-              .trim()
-          }
+          // Import pdf-parse library
+          const pdfParse = (await import('npm:pdf-parse@1.1.1')).default
+          
+          // Extract text from PDF
+          const pdfData = await pdfParse(binaryData)
+          extractedText = pdfData.text
+          
+          console.log(`Successfully extracted ${extractedText.length} characters from PDF`)
           
           // If no meaningful text extracted, provide a helpful message
-          if (!extractedText || extractedText.length < 50) {
-            extractedText = `PDF file "${file_name}" was uploaded but text extraction requires advanced processing. Please copy and paste the job description text manually for best results.`
+          if (!extractedText || extractedText.trim().length < 20) {
+            extractedText = `PDF file "${file_name}" was processed but appears to contain mostly images or non-text content. Please ensure the PDF contains selectable text or try converting it to a text-based format.`
           }
           
         } catch (pdfError) {
-          console.error('PDF parsing error:', pdfError)
-          extractedText = `PDF file "${file_name}" was uploaded but could not be parsed. Please copy and paste the job description text manually.`
+          console.error('PDF parsing error with pdf-parse:', pdfError)
+          
+          // Fallback to basic extraction method
+          try {
+            console.log('Falling back to basic PDF text extraction...')
+            const textDecoder = new TextDecoder('utf-8', { fatal: false })
+            const pdfText = textDecoder.decode(binaryData)
+            
+            // Extract readable text patterns from PDF
+            const textMatches = pdfText.match(/[A-Za-z\s\.\,\;\:\!\?\-\(\)]{20,}/g)
+            if (textMatches && textMatches.length > 0) {
+              extractedText = textMatches
+                .filter(match => match.trim().length > 10)
+                .join(' ')
+                .replace(/\s+/g, ' ')
+                .trim()
+            }
+            
+            if (!extractedText || extractedText.length < 50) {
+              extractedText = `PDF file "${file_name}" could not be parsed with available methods. This may be a scanned PDF or contain complex formatting. Please try converting to text format or copy-paste the content manually.`
+            }
+            
+          } catch (fallbackError) {
+            console.error('Fallback PDF extraction also failed:', fallbackError)
+            extractedText = `PDF file "${file_name}" could not be processed. Please convert to .txt format or copy-paste the job description manually.`
+          }
         }
         
       } else if (file_type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
-        // Handle .docx files
+        // Handle .docx files using office-text-extractor
         try {
-          // DOCX files are ZIP archives containing XML
-          // This is a simplified approach - full DOCX parsing is complex
-          const textDecoder = new TextDecoder('utf-8', { fatal: false })
-          const docxText = textDecoder.decode(binaryData)
+          console.log('Extracting text from DOCX using office-text-extractor...')
           
-          // Look for text content patterns in DOCX XML
-          const xmlTextMatches = docxText.match(/<w:t[^>]*>([^<]+)<\/w:t>/g)
-          if (xmlTextMatches && xmlTextMatches.length > 0) {
-            extractedText = xmlTextMatches
-              .map(match => match.replace(/<[^>]+>/g, ''))
-              .filter(text => text.trim().length > 0)
-              .join(' ')
-              .replace(/\s+/g, ' ')
-              .trim()
-          }
+          const extractor = getTextExtractor()
+          const text = await extractor.extractText({ input: binaryData, type: 'buffer' })
+          extractedText = text
+          
+          console.log(`Successfully extracted ${extractedText.length} characters from DOCX`)
           
           // If no meaningful text extracted, provide a helpful message
-          if (!extractedText || extractedText.length < 50) {
-            extractedText = `DOCX file "${file_name}" was uploaded but text extraction requires advanced processing. Please copy and paste the job description text manually for best results.`
+          if (!extractedText || extractedText.trim().length < 20) {
+            extractedText = `DOCX file "${file_name}" was processed but appears to contain minimal text content. Please check the document or try a different format.`
           }
           
         } catch (docxError) {
-          console.error('DOCX parsing error:', docxError)
-          extractedText = `DOCX file "${file_name}" was uploaded but could not be parsed. Please copy and paste the job description text manually.`
+          console.error('DOCX parsing error with office-text-extractor:', docxError)
+          
+          // Fallback to basic DOCX extraction
+          try {
+            console.log('Falling back to basic DOCX text extraction...')
+            const textDecoder = new TextDecoder('utf-8', { fatal: false })
+            const docxText = textDecoder.decode(binaryData)
+            
+            // Look for text content patterns in DOCX XML
+            const xmlTextMatches = docxText.match(/<w:t[^>]*>([^<]+)<\/w:t>/g)
+            if (xmlTextMatches && xmlTextMatches.length > 0) {
+              extractedText = xmlTextMatches
+                .map(match => match.replace(/<[^>]+>/g, ''))
+                .filter(text => text.trim().length > 0)
+                .join(' ')
+                .replace(/\s+/g, ' ')
+                .trim()
+            }
+            
+            if (!extractedText || extractedText.length < 50) {
+              extractedText = `DOCX file "${file_name}" could not be parsed with available methods. Please try converting to .txt format or copy-paste the content manually.`
+            }
+            
+          } catch (fallbackError) {
+            console.error('Fallback DOCX extraction also failed:', fallbackError)
+            extractedText = `DOCX file "${file_name}" could not be processed. Please convert to .txt format or copy-paste the job description manually.`
+          }
         }
         
       } else {
@@ -111,6 +148,15 @@ serve(async (req) => {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
           }
         )
+      }
+
+      // Clean up the extracted text
+      if (extractedText) {
+        // Remove excessive whitespace and normalize line breaks
+        extractedText = extractedText
+          .replace(/\s+/g, ' ')
+          .replace(/\n\s*\n/g, '\n')
+          .trim()
       }
 
       // Ensure we have some extracted text
