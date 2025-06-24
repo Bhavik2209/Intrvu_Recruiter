@@ -242,4 +242,3 @@ export const MatchingCandidatesSection = ({
     </>
   );
 };
-</DropdownMenuTrigger>
