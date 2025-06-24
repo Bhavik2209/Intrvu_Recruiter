@@ -54,8 +54,14 @@ export const FigmaDesign = (): JSX.Element => {
     }
   }, [matchingResults]);
 
-  const handleWelcomePopupClose = () => {
+  const handleWelcomePopupClose = async () => {
     setShowWelcomePopup(false);
+    
+    // If no chats exist (first-time user), create a new chat
+    if (chats.length === 0) {
+      console.log('First-time user detected, creating initial chat...');
+      await createNewChat("New Job Search");
+    }
   };
 
   const handleFileUpload = () => {
