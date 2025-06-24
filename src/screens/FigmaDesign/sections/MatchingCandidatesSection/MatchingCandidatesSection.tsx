@@ -173,32 +173,34 @@ export const MatchingCandidatesSection = ({
             }`}
             onClick={() => editingId !== chat.id && onSelectChat(chat.id)}
           >
-            <div className="flex items-center mb-1">
-              <div className="w-3 h-3 bg-gray-400 rounded-full mr-3 flex-shrink-0"></div>
-              
-              {editingId === chat.id ? (
-                <input
-                  type="text"
-                  value={editingTitle}
-                  onChange={(e) => setEditingTitle(e.target.value)}
-                  onBlur={() => handleSaveRename(chat.id)}
-                  onKeyDown={(e) => handleKeyPress(e, chat.id)}
-                  className="flex-1 text-sm font-medium text-gray-800 bg-white border border-blue-300 rounded px-2 py-1 mr-2"
-                  autoFocus
-                  onClick={(e) => e.stopPropagation()}
-                />
-              ) : (
-                <span className="text-sm font-medium text-gray-800 truncate flex-1">
-                  {chat.title}
-                </span>
-              )}
+            <div className="flex items-center justify-between mb-1">
+              <div className="flex items-center flex-1 min-w-0">
+                <div className="w-3 h-3 bg-gray-400 rounded-full mr-3 flex-shrink-0"></div>
+                
+                {editingId === chat.id ? (
+                  <input
+                    type="text"
+                    value={editingTitle}
+                    onChange={(e) => setEditingTitle(e.target.value)}
+                    onBlur={() => handleSaveRename(chat.id)}
+                    onKeyDown={(e) => handleKeyPress(e, chat.id)}
+                    className="flex-1 text-sm font-medium text-gray-800 bg-white border border-blue-300 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    autoFocus
+                    onClick={(e) => e.stopPropagation()}
+                  />
+                ) : (
+                  <span className="text-sm font-medium text-gray-800 truncate flex-1 min-w-0">
+                    {chat.title}
+                  </span>
+                )}
+              </div>
 
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button 
                     variant="ghost" 
                     size="icon" 
-                    className="h-6 w-6 flex-shrink-0"
+                    className="h-6 w-6 flex-shrink-0 ml-2"
                     onClick={(e) => e.stopPropagation()}
                   >
                     <MoreVerticalIcon className="h-3 w-3" />
@@ -228,6 +230,7 @@ export const MatchingCandidatesSection = ({
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
+            
             <div className="ml-6">
               <span className="text-xs text-gray-500">
                 Last updated: {formatLastUpdated(chat.updated_at)}
@@ -239,3 +242,4 @@ export const MatchingCandidatesSection = ({
     </>
   );
 };
+</DropdownMenuTrigger>
