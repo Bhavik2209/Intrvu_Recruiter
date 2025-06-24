@@ -1,7 +1,7 @@
 import { SendIcon, PaperclipIcon, LogOutIcon, ChevronLeftIcon, ChevronRightIcon, FileDownIcon } from "lucide-react";
 import React, { useState, useEffect } from "react";
 import { Button } from "../../components/ui/button";
-import { Input } from "../../components/ui/input";
+import { AutoResizeTextarea } from "../../components/AutoResizeTextarea";
 import { FileUploadArea } from "../../components/FileUploadArea";
 import { WelcomePopup } from "../../components/WelcomePopup";
 import { CandidateSearchSection } from "./sections/CandidateSearchSection";
@@ -119,6 +119,7 @@ export const FigmaDesign = (): JSX.Element => {
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
+    // Submit on Enter (without Shift), allow Shift+Enter for new lines
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSendMessage(e as any);
@@ -279,41 +280,53 @@ export const FigmaDesign = (): JSX.Element => {
           />
         </div>
 
-        {/* Input Area */}
+        {/* Enhanced Input Area with Multiline Support */}
         <div className="bg-white border-t border-gray-200 p-4 flex-shrink-0">
           <form onSubmit={handleSendMessage}>
-            <div className="flex items-center gap-2 bg-gray-100 rounded-full p-2">
+            <div className="flex items-end gap-2 bg-gray-100 rounded-lg p-2">
               <Button
                 type="button"
                 variant="ghost"
                 size="icon"
                 onClick={handleFileUpload}
-                className="h-8 w-8 text-gray-500 hover:text-gray-700 hover:bg-gray-200 rounded-full flex-shrink-0"
+                className="h-8 w-8 text-gray-500 hover:text-gray-700 hover:bg-gray-200 rounded-full flex-shrink-0 self-end mb-1"
                 title="Upload job description file"
                 disabled={uploadingFile || parsingFile}
               >
                 <PaperclipIcon className="h-4 w-4" />
               </Button>
-              <Input
-                value={messageInput}
-                onChange={(e) => setMessageInput(e.target.value)}
-                onKeyDown={handleKeyPress}
-                className="flex-1 border-none bg-transparent"
-                placeholder={
-                  activeChatId 
-                    ? "Describe your job requirements, ask questions about candidates or refine your search..."
-                    : "Start a new job search conversation..."
-                }
-                disabled={sendingMessage || uploadingFile || parsingFile}
-              />
+              
+              <div className="flex-1">
+                <AutoResizeTextarea
+                  value={messageInput}
+                  onChange={(e) => setMessageInput(e.target.value)}
+                  onKeyDown={handleKeyPress}
+                  className="border-none bg-transparent resize-none focus-visible:ring-0 focus-visible:ring-offset-0 p-0 min-h-[20px]"
+                  placeholder={
+                    activeChatId 
+                      ? "Describe your job requirements, ask questions about candidates or refine your search...\n\nTip: Use Shift+Enter for new lines, Enter to send"
+                      : "Start a new job search conversation...\n\nTip: Use Shift+Enter for new lines, Enter to send"
+                  }
+                  disabled={sendingMessage || uploadingFile || parsingFile}
+                  minRows={1}
+                  maxRows={8}
+                />
+              </div>
+              
               <Button 
                 type="submit"
                 size="icon" 
-                className="bg-blue-500 hover:bg-blue-600 rounded-full flex-shrink-0"
+                className="bg-blue-500 hover:bg-blue-600 rounded-full flex-shrink-0 h-8 w-8 self-end mb-1"
                 disabled={sendingMessage || !messageInput.trim() || uploadingFile || parsingFile}
               >
                 <SendIcon className="h-4 w-4" />
               </Button>
+            </div>
+            
+            {/* Helper text */}
+            <div className="mt-2 text-xs text-gray-500 text-center">
+              Press <kbd className="px-1 py-0.5 bg-gray-200 rounded text-xs">Shift + Enter</kbd> for new line, 
+              <kbd className="px-1 py-0.5 bg-gray-200 rounded text-xs ml-1">Enter</kbd> to send
             </div>
           </form>
         </div>
