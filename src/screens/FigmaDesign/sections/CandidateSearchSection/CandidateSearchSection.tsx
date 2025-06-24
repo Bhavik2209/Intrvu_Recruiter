@@ -88,7 +88,7 @@ export const CandidateSearchSection = ({
   if (!matchResults || matchResults.length === 0) {
     return (
       <div className="p-4 text-center">
-        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
           <div className="flex items-center justify-center w-12 h-12 bg-yellow-100 rounded-full mx-auto mb-3">
             <svg className="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.5 0L4.268 19.5c-.77.833.192 2.5 1.732 2.5z" />
@@ -102,28 +102,6 @@ export const CandidateSearchSection = ({
               <li>No candidates meet the 50% match threshold</li>
               <li>Resume data needs to be extracted and processed</li>
             </ul>
-          </div>
-        </div>
-        
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <h4 className="text-sm font-medium text-blue-800 mb-2">To get real matching results:</h4>
-          <div className="text-xs text-blue-700 space-y-2 text-left">
-            <div className="flex items-start">
-              <span className="font-medium mr-2">1.</span>
-              <span>Upload candidate resumes to the candidates table</span>
-            </div>
-            <div className="flex items-start">
-              <span className="font-medium mr-2">2.</span>
-              <span>Process resumes to extract text into the extracted_data field</span>
-            </div>
-            <div className="flex items-start">
-              <span className="font-medium mr-2">3.</span>
-              <span>Set candidate status to 'completed' after processing</span>
-            </div>
-            <div className="flex items-start">
-              <span className="font-medium mr-2">4.</span>
-              <span>Provide a detailed job description for accurate matching</span>
-            </div>
           </div>
         </div>
       </div>
