@@ -323,25 +323,39 @@ export const FigmaDesign = (): JSX.Element => {
       <div className={`${isCandidatesCollapsed ? 'w-12' : 'w-[420px]'} bg-white border-l border-gray-200 flex flex-col transition-all duration-300 ease-in-out flex-shrink-0`}>
         {isCandidatesCollapsed ? (
           /* Collapsed State */
-          <div className="h-full flex flex-col items-center py-4">
+          <div className="h-full flex flex-col items-center justify-center py-4 relative">
             <Button
               variant="ghost"
               size="icon"
               onClick={() => setIsCandidatesCollapsed(false)}
-              className="mb-4 rotate-180"
+              className="absolute top-4 left-1/2 transform -translate-x-1/2 rotate-180"
               title="Expand candidates panel"
             >
               <ChevronLeftIcon className="h-4 w-4" />
             </Button>
-            <div className="writing-mode-vertical text-sm font-medium text-gray-600 transform rotate-180">
-              Matching Candidates
+            
+            {/* Vertical Text */}
+            <div className="flex-1 flex items-center justify-center">
+              <div 
+                className="text-sm font-medium text-gray-600 whitespace-nowrap"
+                style={{
+                  writingMode: 'vertical-rl',
+                  textOrientation: 'mixed'
+                }}
+              >
+                Matching Candidates
+              </div>
             </div>
+            
+            {/* Candidate Count Indicator */}
             {hasMatches && (
-              <div className="mt-4 flex flex-col gap-2">
+              <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex flex-col items-center gap-2">
                 <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
                   <span className="text-xs font-medium text-green-700">{candidateCount}</span>
                 </div>
-                <div className="text-xs text-gray-500 text-center">Found</div>
+                <div className="text-xs text-gray-500 text-center transform rotate-90 whitespace-nowrap">
+                  Found
+                </div>
               </div>
             )}
           </div>
