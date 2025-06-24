@@ -304,8 +304,8 @@ export const FigmaDesign = (): JSX.Element => {
                   className="border-none bg-transparent resize-none focus-visible:ring-0 focus-visible:ring-offset-0 p-0 min-h-[20px]"
                   placeholder={
                     activeChatId 
-                      ? "Describe your job requirements, ask questions about candidates or refine your search...\n\nTip: Use Shift+Enter for new lines, Enter to send"
-                      : "Start a new job search conversation...\n\nTip: Use Shift+Enter for new lines, Enter to send"
+                      ? "Describe your job requirements, ask questions about candidates or refine your search..."
+                      : "Start a new job search conversation..."
                   }
                   disabled={sendingMessage || uploadingFile || parsingFile}
                   minRows={1}
@@ -321,12 +321,6 @@ export const FigmaDesign = (): JSX.Element => {
               >
                 <SendIcon className="h-4 w-4" />
               </Button>
-            </div>
-            
-            {/* Helper text */}
-            <div className="mt-2 text-xs text-gray-500 text-center">
-              Press <kbd className="px-1 py-0.5 bg-gray-200 rounded text-xs">Shift + Enter</kbd> for new line, 
-              <kbd className="px-1 py-0.5 bg-gray-200 rounded text-xs ml-1">Enter</kbd> to send
             </div>
           </form>
         </div>
