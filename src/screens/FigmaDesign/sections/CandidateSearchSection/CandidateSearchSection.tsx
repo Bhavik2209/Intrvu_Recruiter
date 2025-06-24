@@ -4,6 +4,7 @@ import { Badge } from "../../../../components/ui/badge";
 import { Button } from "../../../../components/ui/button";
 import { Card, CardContent } from "../../../../components/ui/card";
 import { MatchResult } from "../../../../hooks/useResumeMatching";
+import { DownloadIcon } from "lucide-react";
 
 interface CandidateSearchSectionProps {
   matchResults?: MatchResult[];
@@ -14,6 +15,64 @@ export const CandidateSearchSection = ({
   matchResults, 
   loading = false 
 }: CandidateSearchSectionProps): JSX.Element => {
+  const handleDownloadResume = async (candidateId: string, candidateName: string) => {
+    try {
+      // Get candidate data from Supabase to fetch the resume_url
+      const { createClient } = await import('@supabase/supabase-js');
+      const supabase = createClient(
+        import.meta.env.VITE_SUPABASE_URL,
+        import.meta.env.VITE_SUPABASE_ANON_KEY
+      );
+
+      const { data: candidate, error } = await supabase
+        .from('candidates')
+        .select('resume_url, resume_filename')
+        .eq('id', candidateId)
+        .single();
+
+      if (error) {
+        console.error('Error fetching candidate data:', error);
+        alert('Failed to fetch resume information. Please try again.');
+        return;
+      }
+
+      if (!candidate?.resume_url) {
+        alert('Resume file not available for this candidate.');
+        return;
+      }
+
+      // Create a temporary link element to trigger download
+      const link = document.createElement('a');
+      link.href = candidate.resume_url;
+      
+      // Set the download filename
+      const filename = candidate.resume_filename || `${candidateName.replace(/\s+/g, '_')}_Resume.pdf`;
+      link.download = filename;
+      
+      // For external URLs, we need to handle CORS by opening in new tab
+      // Check if it's an external URL
+      const isExternalUrl = candidate.resume_url.startsWith('http') && 
+                           !candidate.resume_url.includes(window.location.hostname);
+      
+      if (isExternalUrl) {
+        // For external URLs, open in new tab (browser will handle download)
+        link.target = '_blank';
+        link.rel = 'noopener noreferrer';
+      }
+      
+      // Append to body, click, and remove
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      console.log(`Resume download initiated for ${candidateName}`);
+      
+    } catch (error) {
+      console.error('Error downloading resume:', error);
+      alert('Failed to download resume. Please try again.');
+    }
+  };
+
   if (loading) {
     return (
       <div className="p-4 flex items-center justify-center">
@@ -230,13 +289,15 @@ export const CandidateSearchSection = ({
               )}
             </div>
 
-            {/* Action Buttons */}
-            <div className="mt-4 pt-3 border-t border-gray-200 flex gap-2">
-              <Button size="sm" className="bg-blue-500 hover:bg-blue-600 text-white text-xs flex-1">
-                View Full Resume
-              </Button>
-              <Button size="sm" variant="outline" className="text-xs">
-                Contact Candidate
+            {/* Action Button - Only Download Resume */}
+            <div className="mt-4 pt-3 border-t border-gray-200">
+              <Button 
+                size="sm" 
+                className="w-full bg-blue-500 hover:bg-blue-600 text-white text-xs flex items-center justify-center gap-2"
+                onClick={() => handleDownloadResume(result.candidate_id, result.candidate_name)}
+              >
+                <DownloadIcon className="h-3 w-3" />
+                Download Resume
               </Button>
             </div>
           </CardContent>
