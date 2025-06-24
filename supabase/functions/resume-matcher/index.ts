@@ -122,8 +122,8 @@ serve(async (req) => {
       if (!resumeText) return false
       
       const keywordScore = calculateKeywordScore(resumeText, jobKeywords)
-      // Only proceed with candidates that have at least 20% keyword match
-      return keywordScore >= 0.2
+      // Only proceed with candidates that have at least 15% keyword match (lowered from 20%)
+      return keywordScore >= 0.15
     })
 
     console.log(`Filtered to ${filteredCandidates.length} candidates after keyword screening`)
@@ -157,9 +157,9 @@ serve(async (req) => {
       
       const batchResults = await Promise.allSettled(batchPromises)
       
-      // Collect successful results
+      // Collect successful results - Changed threshold from 75% to 50%
       batchResults.forEach((result, index) => {
-        if (result.status === 'fulfilled' && result.value && result.value.match_score >= 75) {
+        if (result.status === 'fulfilled' && result.value && result.value.match_score >= 50) {
           matchResults.push(result.value)
         } else if (result.status === 'rejected') {
           console.error(`Failed to analyze candidate ${batch[index].name}:`, result.reason)
@@ -379,7 +379,7 @@ SCORING FRAMEWORK (Total: 100 points):
 3. Education & Certifications (20 points)
 4. Skills & Tools Relevance (20 points)
 
-IMPORTANT: Only recommend candidates with 75% or higher match scores.
+IMPORTANT: Only recommend candidates with 50% or higher match scores.
 
 You must respond in valid JSON format with this exact structure:
 {

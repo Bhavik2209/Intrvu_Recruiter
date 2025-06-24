@@ -99,7 +99,7 @@ export const CandidateSearchSection = ({
             <p>This could be because:</p>
             <ul className="list-disc list-inside space-y-1 mt-2">
               <li>No candidates in database have processed resumes</li>
-              <li>No candidates meet the 75% match threshold</li>
+              <li>No candidates meet the 50% match threshold</li>
               <li>Resume data needs to be extracted and processed</li>
             </ul>
           </div>
@@ -142,7 +142,7 @@ export const CandidateSearchSection = ({
           </div>
           <div>
             <p className="text-sm font-medium text-green-800">
-              {matchResults.length} candidates found with 75%+ match
+              {matchResults.length} candidates found with 50%+ match
             </p>
             <p className="text-xs text-green-600">Ranked by compatibility score</p>
           </div>
@@ -165,8 +165,8 @@ export const CandidateSearchSection = ({
               </div>
               <Badge className={`${
                 result.match_score >= 90 ? 'bg-green-500' : 
-                result.match_score >= 85 ? 'bg-blue-500' : 
-                result.match_score >= 80 ? 'bg-yellow-500' : 
+                result.match_score >= 75 ? 'bg-blue-500' : 
+                result.match_score >= 60 ? 'bg-yellow-500' : 
                 'bg-orange-500'
               } text-white text-xs px-2 py-1`}>
                 {result.match_score}% Match

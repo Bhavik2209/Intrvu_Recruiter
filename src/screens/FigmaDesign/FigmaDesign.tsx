@@ -322,7 +322,7 @@ export const FigmaDesign = (): JSX.Element => {
                   <h2 className="font-medium">Matching Candidates</h2>
                   <p className="text-sm text-blue-100">
                     {matchingLoading ? 'Analyzing resumes...' : 
-                     hasMatches ? `${candidateCount} candidates found (75%+ match)` : 
+                     hasMatches ? `${candidateCount} candidates found (50%+ match)` : 
                      'Start a search to find candidates'}
                   </p>
                 </div>
