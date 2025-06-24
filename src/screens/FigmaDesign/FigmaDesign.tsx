@@ -13,7 +13,7 @@ import { exportMatchingResultsToPDF } from "../../utils/pdfExport";
 
 export const FigmaDesign = (): JSX.Element => {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-  const [isCandidatesCollapsed, setIsCandidatesCollapsed] = useState(false);
+  const [isCandidatesCollapsed, setIsCandidatesCollapsed] = useState(true); // Start collapsed
   const [messageInput, setMessageInput] = useState("");
   const [showFileUpload, setShowFileUpload] = useState(false);
   const [fileUploadError, setFileUploadError] = useState("");
@@ -46,6 +46,13 @@ export const FigmaDesign = (): JSX.Element => {
       setShowWelcomePopup(true);
     }
   }, [chats.length, loading]);
+
+  // Auto-expand candidates column when matching results are found
+  useEffect(() => {
+    if (matchingResults && matchingResults.matches && matchingResults.matches.length > 0) {
+      setIsCandidatesCollapsed(false);
+    }
+  }, [matchingResults]);
 
   const handleWelcomePopupClose = () => {
     setShowWelcomePopup(false);
