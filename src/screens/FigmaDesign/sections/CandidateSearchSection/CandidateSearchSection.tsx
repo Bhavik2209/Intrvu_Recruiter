@@ -95,14 +95,6 @@ export const CandidateSearchSection = ({
             </svg>
           </div>
           <h3 className="text-sm font-medium text-yellow-800 mb-2">No Matching Candidates Found</h3>
-          <div className="text-xs text-yellow-700 space-y-1">
-            <p>This could be because:</p>
-            <ul className="list-disc list-inside space-y-1 mt-2">
-              <li>No candidates in database have processed resumes</li>
-              <li>No candidates meet the 50% match threshold</li>
-              <li>Resume data needs to be extracted and processed</li>
-            </ul>
-          </div>
         </div>
       </div>
     );
