@@ -1,4 +1,4 @@
-import { SendIcon, PaperclipIcon, LogOutIcon, ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
+import { SendIcon, PaperclipIcon, LogOutIcon, ChevronLeftIcon, ChevronRightIcon, FileDownIcon } from "lucide-react";
 import React, { useState, useEffect } from "react";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
@@ -9,6 +9,7 @@ import { JobDescriptionSection } from "./sections/JobDescriptionSection";
 import { MatchingCandidatesSection } from "./sections/MatchingCandidatesSection";
 import { useAuth } from "../../hooks/useAuth";
 import { useChat } from "../../hooks/useChat";
+import { exportMatchingResultsToPDF } from "../../utils/pdfExport";
 
 export const FigmaDesign = (): JSX.Element => {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
@@ -18,6 +19,7 @@ export const FigmaDesign = (): JSX.Element => {
   const [fileUploadError, setFileUploadError] = useState("");
   const [uploadStatus, setUploadStatus] = useState("");
   const [showWelcomePopup, setShowWelcomePopup] = useState(false);
+  const [exportingPDF, setExportingPDF] = useState(false);
   const { user, userProfile, signOut } = useAuth();
   
   const {
@@ -36,20 +38,17 @@ export const FigmaDesign = (): JSX.Element => {
     uploadJobDescriptionFile,
     matchingResults,
     matchingLoading,
-    isFirstChatEver,
-    markFirstChatSeen,
   } = useChat(user?.id);
 
   // Show welcome popup for first-time users
   useEffect(() => {
-    if (isFirstChatEver) {
+    if (chats.length === 0 && !loading) {
       setShowWelcomePopup(true);
     }
-  }, [isFirstChatEver]);
+  }, [chats.length, loading]);
 
   const handleWelcomePopupClose = () => {
     setShowWelcomePopup(false);
-    markFirstChatSeen();
   };
 
   const handleFileUpload = () => {
@@ -116,6 +115,33 @@ export const FigmaDesign = (): JSX.Element => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSendMessage(e as any);
+    }
+  };
+
+  const handleExportResults = async () => {
+    if (!matchingResults || matchingResults.matches.length === 0) {
+      alert('No matching candidates to export. Please run a candidate search first.');
+      return;
+    }
+
+    setExportingPDF(true);
+    
+    try {
+      // Get the current chat title for the job position
+      const currentChat = chats.find(chat => chat.id === activeChatId);
+      const jobTitle = currentChat?.title || 'Job Search';
+      
+      // Export to PDF
+      exportMatchingResultsToPDF(matchingResults, jobTitle);
+      
+      // Show success message
+      console.log('PDF export completed successfully');
+      
+    } catch (error) {
+      console.error('Error exporting PDF:', error);
+      alert('Failed to export results. Please try again.');
+    } finally {
+      setExportingPDF(false);
     }
   };
 
@@ -343,10 +369,21 @@ export const FigmaDesign = (): JSX.Element => {
               <Button 
                 variant="outline" 
                 size="sm" 
-                className="w-full"
-                disabled={!hasMatches}
+                className="w-full flex items-center justify-center gap-2"
+                disabled={!hasMatches || exportingPDF}
+                onClick={handleExportResults}
               >
-                Export Results
+                {exportingPDF ? (
+                  <>
+                    <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-gray-500"></div>
+                    Generating PDF...
+                  </>
+                ) : (
+                  <>
+                    <FileDownIcon className="h-4 w-4" />
+                    Export Results (PDF)
+                  </>
+                )}
               </Button>
             </div>
 
