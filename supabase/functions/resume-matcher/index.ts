@@ -10,6 +10,8 @@ interface MatchResult {
   candidate_id: string
   candidate_name: string
   candidate_email: string
+  candidate_title?: string
+  linkedin_url?: string
   match_score: number
   keyword_score: number
   experience_score: number
@@ -381,8 +383,14 @@ SCORING FRAMEWORK (Total: 100 points):
 
 IMPORTANT: Only recommend candidates with 50% or higher match scores.
 
+EXTRACTION REQUIREMENTS:
+- Extract the candidate's primary job title/role from their resume
+- Extract their LinkedIn profile URL if present (look for linkedin.com/in/ patterns)
+
 You must respond in valid JSON format with this exact structure:
 {
+  "candidate_title": "string (primary job title from resume, e.g., 'Senior Frontend Developer')",
+  "linkedin_url": "string (LinkedIn profile URL if found, otherwise empty string)",
   "match_score": number (0-100),
   "keyword_score": number (0-25),
   "experience_score": number (0-35),
@@ -452,6 +460,8 @@ Analyze thoroughly but be realistic in scoring. Focus on quality matches over qu
       candidate_id: candidate.id,
       candidate_name: candidate.name,
       candidate_email: candidate.email,
+      candidate_title: analysisResult.candidate_title || '',
+      linkedin_url: analysisResult.linkedin_url || '',
       match_score: analysisResult.match_score,
       keyword_score: analysisResult.keyword_score,
       experience_score: analysisResult.experience_score,

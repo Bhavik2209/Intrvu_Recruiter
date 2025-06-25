@@ -1,9 +1,9 @@
-import { useState } from 'react'
-
 export interface MatchResult {
   candidate_id: string
   candidate_name: string
   candidate_email: string
+  candidate_title?: string
+  linkedin_url?: string
   match_score: number
   keyword_score: number
   experience_score: number

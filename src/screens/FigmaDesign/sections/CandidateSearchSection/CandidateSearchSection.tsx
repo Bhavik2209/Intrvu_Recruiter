@@ -4,7 +4,7 @@ import { Badge } from "../../../../components/ui/badge";
 import { Button } from "../../../../components/ui/button";
 import { Card, CardContent } from "../../../../components/ui/card";
 import { MatchResult } from "../../../../hooks/useResumeMatching";
-import { DownloadIcon } from "lucide-react";
+import { DownloadIcon, ExternalLinkIcon } from "lucide-react";
 
 interface CandidateSearchSectionProps {
   matchResults?: MatchResult[];
@@ -122,23 +122,58 @@ export const CandidateSearchSection = ({
       {matchResults.map((result, index) => (
         <Card key={result.candidate_id} className="border border-gray-200 hover:shadow-md transition-shadow">
           <CardContent className="p-4">
-            {/* Header with Rank */}
+            {/* Header with Rank and Match Score */}
             <div className="flex items-start justify-between mb-4">
-              <div className="flex items-center">
-                <div className="w-8 h-8 bg-blue-500 text-white rounded-full mr-3 flex items-center justify-center text-sm font-medium">
+              <div className="flex items-start space-x-3">
+                {/* Numbered Avatar */}
+                <div className="w-10 h-10 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm font-medium flex-shrink-0">
                   #{index + 1}
                 </div>
-                <div>
-                  <h3 className="font-medium text-sm text-gray-900">{result.candidate_name}</h3>
-                  <p className="text-xs text-gray-600">{result.candidate_email}</p>
+                
+                {/* Candidate Info */}
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-medium text-sm text-gray-900 mb-1">{result.candidate_name}</h3>
+                  {result.candidate_title && (
+                    <p className="text-sm text-gray-600 mb-1">{result.candidate_title}</p>
+                  )}
+                  
+                  {/* Contact Information Grid */}
+                  <div className="grid grid-cols-1 gap-2 text-xs text-gray-500 mb-2">
+                    <div>
+                      <span className="font-medium text-gray-700">Email</span>
+                      <p className="text-gray-600">{result.candidate_email}</p>
+                    </div>
+                    
+                    {result.linkedin_url && (
+                      <div>
+                        <span className="font-medium text-gray-700">LinkedIn</span>
+                        <a 
+                          href={result.linkedin_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-blue-600 hover:text-blue-800 flex items-center gap-1 mt-1"
+                        >
+                          <span className="truncate">{result.linkedin_url.replace('https://', '').replace('http://', '')}</span>
+                          <ExternalLinkIcon className="h-3 w-3 flex-shrink-0" />
+                        </a>
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* Actively Looking Badge */}
+                  <Badge className="bg-green-100 text-green-700 text-xs px-2 py-1 mb-2">
+                    Actively looking
+                  </Badge>
                 </div>
               </div>
+              
+              {/* Match Score Badge */}
               <Badge className={`${
                 result.match_score >= 90 ? 'bg-green-500' : 
                 result.match_score >= 75 ? 'bg-blue-500' : 
                 result.match_score >= 60 ? 'bg-yellow-500' : 
                 'bg-orange-500'
-              } text-white text-xs px-2 py-1`}>
+              } text-white text-xs px-2 py-1 flex-shrink-0`}>
                 {result.match_score}% Match
               </Badge>
             </div>
