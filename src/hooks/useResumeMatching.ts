@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 export interface MatchResult {
   candidate_id: string
@@ -43,10 +43,32 @@ export interface MatchingResults {
   qualifying_matches: number
 }
 
+const CACHE_KEY = 'intrvurecruiter_matching_results'
+
 export const useResumeMatching = () => {
   const [loading, setLoading] = useState(false)
-  const [results, setResults] = useState<MatchingResults | null>(null)
+  const [results, setResults] = useState<MatchingResults | null>(() => {
+    // Initialize from localStorage if available
+    try {
+      const cached = localStorage.getItem(CACHE_KEY)
+      return cached ? JSON.parse(cached) : null
+    } catch (error) {
+      console.error('Error loading cached results:', error)
+      return null
+    }
+  })
   const [error, setError] = useState<string | null>(null)
+
+  // Cache results to localStorage whenever they change
+  useEffect(() => {
+    if (results) {
+      try {
+        localStorage.setItem(CACHE_KEY, JSON.stringify(results))
+      } catch (error) {
+        console.error('Error caching results:', error)
+      }
+    }
+  }, [results])
 
   const analyzeResumes = async (jobDescription: string, chatId?: string) => {
     if (!jobDescription.trim()) {
@@ -56,7 +78,6 @@ export const useResumeMatching = () => {
 
     setLoading(true)
     setError(null)
-    setResults(null)
 
     try {
       const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/resume-matcher`, {
@@ -89,6 +110,12 @@ export const useResumeMatching = () => {
   const clearResults = () => {
     setResults(null)
     setError(null)
+    // Also clear from localStorage
+    try {
+      localStorage.removeItem(CACHE_KEY)
+    } catch (error) {
+      console.error('Error clearing cached results:', error)
+    }
   }
 
   return {

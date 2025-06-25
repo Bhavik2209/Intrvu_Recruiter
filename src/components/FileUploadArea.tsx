@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useImperativeHandle, forwardRef } from 'react';
 import { Button } from './ui/button';
 import { Card, CardContent } from './ui/card';
 import { UploadIcon, FileTextIcon, XIcon } from 'lucide-react';
@@ -10,6 +10,10 @@ interface FileUploadAreaProps {
   className?: string;
 }
 
+export interface FileUploadAreaRef {
+  openFileDialog: () => void;
+}
+
 const ALLOWED_FILE_TYPES = {
   'application/pdf': '.pdf',
   'text/plain': '.txt',
@@ -18,15 +22,22 @@ const ALLOWED_FILE_TYPES = {
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
-export const FileUploadArea = ({ 
+export const FileUploadArea = forwardRef<FileUploadAreaRef, FileUploadAreaProps>(({ 
   onFileSelect, 
   onError, 
   isLoading = false,
   className = ""
-}: FileUploadAreaProps): JSX.Element => {
+}, ref) => {
   const [isDragging, setIsDragging] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Expose the openFileDialog function to parent components
+  useImperativeHandle(ref, () => ({
+    openFileDialog: () => {
+      fileInputRef.current?.click();
+    }
+  }));
 
   const validateFile = (file: File): string | null => {
     // Check file type
@@ -90,10 +101,6 @@ export const FileUploadArea = ({
     }
   };
 
-  const handleBrowseClick = () => {
-    fileInputRef.current?.click();
-  };
-
   const handleRemoveFile = () => {
     setSelectedFile(null);
     if (fileInputRef.current) {
@@ -146,7 +153,7 @@ export const FileUploadArea = ({
       />
       
       <Card 
-        className={`border-2 border-dashed transition-colors cursor-pointer ${
+        className={`border-2 border-dashed transition-colors ${
           isDragging 
             ? 'border-blue-400 bg-blue-50' 
             : 'border-gray-300 hover:border-gray-400 hover:bg-gray-50'
@@ -154,7 +161,6 @@ export const FileUploadArea = ({
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
-        onClick={!isLoading ? handleBrowseClick : undefined}
       >
         <CardContent className="p-6">
           <div className="text-center">
@@ -182,7 +188,7 @@ export const FileUploadArea = ({
                 className="mt-4"
                 onClick={(e) => {
                   e.stopPropagation();
-                  handleBrowseClick();
+                  fileInputRef.current?.click();
                 }}
               >
                 Choose File
@@ -193,4 +199,6 @@ export const FileUploadArea = ({
       </Card>
     </>
   );
-};
+});
+
+FileUploadArea.displayName = "FileUploadArea";

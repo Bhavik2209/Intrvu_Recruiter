@@ -167,8 +167,7 @@ export const CandidateSearchSection = ({
                     </Badge>
                     <Button 
                       size="sm" 
-                      variant="outline"
-                      className="text-xs h-6 px-2 flex items-center gap-1"
+                      className="bg-blue-500 hover:bg-blue-600 text-white text-xs h-6 px-3 rounded-full flex items-center gap-1"
                       onClick={() => handleDownloadResume(result.candidate_id, result.candidate_name)}
                     >
                       <DownloadIcon className="h-3 w-3" />

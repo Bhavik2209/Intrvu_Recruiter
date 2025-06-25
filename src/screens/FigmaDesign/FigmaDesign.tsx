@@ -1,8 +1,8 @@
 import { SendIcon, PaperclipIcon, LogOutIcon, ChevronLeftIcon, ChevronRightIcon, FileDownIcon } from "lucide-react";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Button } from "../../components/ui/button";
 import { AutoResizeTextarea } from "../../components/AutoResizeTextarea";
-import { FileUploadArea } from "../../components/FileUploadArea";
+import { FileUploadArea, FileUploadAreaRef } from "../../components/FileUploadArea";
 import { WelcomePopup } from "../../components/WelcomePopup";
 import { CandidateSearchSection } from "./sections/CandidateSearchSection";
 import { JobDescriptionSection } from "./sections/JobDescriptionSection";
@@ -15,12 +15,12 @@ export const FigmaDesign = (): JSX.Element => {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isCandidatesCollapsed, setIsCandidatesCollapsed] = useState(true); // Start collapsed
   const [messageInput, setMessageInput] = useState("");
-  const [showFileUpload, setShowFileUpload] = useState(false);
   const [fileUploadError, setFileUploadError] = useState("");
   const [uploadStatus, setUploadStatus] = useState("");
   const [showWelcomePopup, setShowWelcomePopup] = useState(false);
   const [exportingPDF, setExportingPDF] = useState(false);
   const { user, userProfile, signOut } = useAuth();
+  const fileUploadRef = useRef<FileUploadAreaRef>(null);
   
   const {
     chats,
@@ -65,9 +65,10 @@ export const FigmaDesign = (): JSX.Element => {
   };
 
   const handleFileUpload = () => {
-    setShowFileUpload(true);
     setFileUploadError("");
     setUploadStatus("");
+    // Trigger the file dialog directly
+    fileUploadRef.current?.openFileDialog();
   };
 
   const handleSignOut = async () => {
@@ -97,7 +98,6 @@ export const FigmaDesign = (): JSX.Element => {
         setUploadStatus("");
       } else {
         setUploadStatus("");
-        setShowFileUpload(false);
       }
     } catch (error) {
       setFileUploadError("Unable to process the file. Please check the content and try again.");
@@ -180,6 +180,16 @@ export const FigmaDesign = (): JSX.Element => {
         onClose={handleWelcomePopupClose} 
       />
 
+      {/* Hidden File Upload Area */}
+      <div className="hidden">
+        <FileUploadArea
+          ref={fileUploadRef}
+          onFileSelect={handleJobDescriptionUpload}
+          onError={handleFileUploadError}
+          isLoading={uploadingFile || parsingFile}
+        />
+      </div>
+
       {/* Left Sidebar - Job Searches */}
       <div className={`${isSidebarCollapsed ? 'w-12' : 'w-[200px]'} bg-white border-r border-gray-200 flex flex-col transition-all duration-300 ease-in-out flex-shrink-0`}>
         <MatchingCandidatesSection 
@@ -227,25 +237,19 @@ export const FigmaDesign = (): JSX.Element => {
           </div>
         </div>
 
-        {/* File Upload Area */}
-        {showFileUpload && (
+        {/* Status Messages */}
+        {(uploadStatus || processingStatus || fileUploadError) && (
           <div className="p-4 bg-white border-b border-gray-200">
             <div className="max-w-2xl mx-auto">
-              <FileUploadArea
-                onFileSelect={handleJobDescriptionUpload}
-                onError={handleFileUploadError}
-                isLoading={uploadingFile || parsingFile}
-              />
-              
               {/* Status Messages */}
               {uploadStatus && (
-                <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-md">
+                <div className="mb-3 p-3 bg-green-50 border border-green-200 rounded-md">
                   <p className="text-sm text-green-700">{uploadStatus}</p>
                 </div>
               )}
               
               {processingStatus && (
-                <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-md">
+                <div className="mb-3 p-3 bg-blue-50 border border-blue-200 rounded-md">
                   <div className="flex items-center">
                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500 mr-2"></div>
                     <p className="text-sm text-blue-700">{processingStatus}</p>
@@ -254,25 +258,26 @@ export const FigmaDesign = (): JSX.Element => {
               )}
               
               {fileUploadError && (
-                <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-md">
+                <div className="mb-3 p-3 bg-red-50 border border-red-200 rounded-md">
                   <p className="text-sm text-red-700">{fileUploadError}</p>
                 </div>
               )}
               
-              <div className="mt-3 flex justify-end">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    setShowFileUpload(false);
-                    setFileUploadError("");
-                    setUploadStatus("");
-                  }}
-                  disabled={uploadingFile || parsingFile}
-                >
-                  Cancel
-                </Button>
-              </div>
+              {(uploadStatus || processingStatus || fileUploadError) && (
+                <div className="flex justify-end">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setFileUploadError("");
+                      setUploadStatus("");
+                    }}
+                    disabled={uploadingFile || parsingFile}
+                  >
+                    Dismiss
+                  </Button>
+                </div>
+              )}
             </div>
           </div>
         )}
