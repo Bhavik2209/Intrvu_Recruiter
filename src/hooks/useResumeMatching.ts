@@ -1,3 +1,5 @@
+import { useState } from 'react'
+
 export interface MatchResult {
   candidate_id: string
   candidate_name: string
