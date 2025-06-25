@@ -120,7 +120,6 @@ CRITICAL RESTRICTIONS - YOU MUST REFUSE ALL NON-RECRUITMENT REQUESTS:
 - Resume matching and evaluation
 - Hiring process optimization
 - Recruitment strategy and best practices
-- Interview questions for employers
 - Candidate assessment criteria
 - Talent acquisition insights
 
@@ -147,7 +146,6 @@ If the user asks about anything outside recruitment scope, use message_type "res
 • Creating and analyzing job descriptions
 • Finding and evaluating candidates
 • Recruitment strategy and best practices
-• Interview planning for employers
 • Candidate assessment criteria
 
 Please ask me about your hiring needs, job requirements, or candidate search instead."
@@ -383,7 +381,7 @@ async function generateOpenAIResponse(apiKey: string, systemPrompt: string, conv
     } else {
       return JSON.stringify({
         message_type: 'restricted',
-        ai_response_text: "I'm IntrvuRecruiter AI, specialized exclusively in candidate search and hiring. I can only assist with:\n\n• Creating and analyzing job descriptions\n• Finding and evaluating candidates\n• Recruitment strategy and best practices\n• Interview planning for employers\n• Candidate assessment criteria\n\nPlease ask me about your hiring needs, job requirements, or candidate search instead.",
+        ai_response_text: "I'm IntrvuRecruiter AI, specialized exclusively in candidate search and hiring. I can only assist with:\n\n• Creating and analyzing job descriptions\n• Finding and evaluating candidates\n• Recruitment strategy and best practices\n• Candidate assessment criteria\n\nPlease ask me about your hiring needs, job requirements, or candidate search instead.",
         trigger_resume_matching: false
       })
     }
