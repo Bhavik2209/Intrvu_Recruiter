@@ -6,12 +6,20 @@ interface JobDescriptionSectionProps {
   messages: ChatMessage[];
   activeChatId: string | null;
   loading: boolean;
+  sendingMessage?: boolean;
+  uploadingFile?: boolean;
+  parsingFile?: boolean;
+  matchingLoading?: boolean;
 }
 
 export const JobDescriptionSection = ({ 
   messages, 
   activeChatId, 
-  loading 
+  loading,
+  sendingMessage = false,
+  uploadingFile = false,
+  parsingFile = false,
+  matchingLoading = false
 }: JobDescriptionSectionProps): JSX.Element => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -21,12 +29,23 @@ export const JobDescriptionSection = ({
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages]);
+  }, [messages, sendingMessage, uploadingFile, parsingFile, matchingLoading]);
 
   const formatTime = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
+
+  // Determine what thinking message to show
+  const getThinkingMessage = () => {
+    if (uploadingFile) return "Uploading your file...";
+    if (parsingFile) return "Extracting text from your document...";
+    if (matchingLoading) return "Analyzing resumes and finding the best matches...";
+    if (sendingMessage) return "AI is thinking...";
+    return null;
+  };
+
+  const thinkingMessage = getThinkingMessage();
 
   if (loading && !activeChatId) {
     return (
@@ -86,6 +105,29 @@ export const JobDescriptionSection = ({
             </div>
           </div>
         </div>
+
+        {/* Show thinking indicator if processing */}
+        {thinkingMessage && (
+          <div className="flex justify-start">
+            <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center mr-3 flex-shrink-0">
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+            </div>
+            <div className="max-w-lg">
+              <Card className="bg-blue-50 border border-blue-200">
+                <CardContent className="p-4">
+                  <p className="text-sm leading-relaxed text-blue-700">
+                    {thinkingMessage}
+                  </p>
+                </CardContent>
+              </Card>
+              <div className="mt-1 ml-2">
+                <span className="text-xs text-blue-500">Processing...</span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        <div ref={messagesEndRef} />
       </div>
     );
   }
@@ -163,6 +205,27 @@ export const JobDescriptionSection = ({
           )}
         </div>
       ))}
+
+      {/* Show thinking indicator if processing */}
+      {thinkingMessage && (
+        <div className="flex justify-start">
+          <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center mr-3 flex-shrink-0">
+            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+          </div>
+          <div className="max-w-lg">
+            <Card className="bg-blue-50 border border-blue-200">
+              <CardContent className="p-4">
+                <p className="text-sm leading-relaxed text-blue-700">
+                  {thinkingMessage}
+                </p>
+              </CardContent>
+            </Card>
+            <div className="mt-1 ml-2">
+              <span className="text-xs text-blue-500">Processing...</span>
+            </div>
+          </div>
+        </div>
+      )}
       
       <div ref={messagesEndRef} />
     </div>

@@ -283,6 +283,10 @@ export const FigmaDesign = (): JSX.Element => {
             messages={messages}
             activeChatId={activeChatId}
             loading={loading}
+            sendingMessage={sendingMessage}
+            uploadingFile={uploadingFile}
+            parsingFile={parsingFile}
+            matchingLoading={matchingLoading}
           />
         </div>
 

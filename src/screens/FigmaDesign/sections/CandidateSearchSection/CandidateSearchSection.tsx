@@ -160,10 +160,21 @@ export const CandidateSearchSection = ({
                     )}
                   </div>
                   
-                  {/* Actively Looking Badge */}
-                  <Badge className="bg-green-100 text-green-700 text-xs px-2 py-1 mb-2">
-                    Actively looking
-                  </Badge>
+                  {/* Actively Looking Badge and Download Button */}
+                  <div className="flex items-center gap-2">
+                    <Badge className="bg-green-100 text-green-700 text-xs px-2 py-1">
+                      Actively looking
+                    </Badge>
+                    <Button 
+                      size="sm" 
+                      variant="outline"
+                      className="text-xs h-6 px-2 flex items-center gap-1"
+                      onClick={() => handleDownloadResume(result.candidate_id, result.candidate_name)}
+                    >
+                      <DownloadIcon className="h-3 w-3" />
+                      Resume
+                    </Button>
+                  </div>
                 </div>
               </div>
               
@@ -272,18 +283,6 @@ export const CandidateSearchSection = ({
                   </div>
                 </div>
               )}
-            </div>
-
-            {/* Action Button - Only Download Resume */}
-            <div className="mt-4 pt-3 border-t border-gray-200">
-              <Button 
-                size="sm" 
-                className="w-full bg-blue-500 hover:bg-blue-600 text-white text-xs flex items-center justify-center gap-2"
-                onClick={() => handleDownloadResume(result.candidate_id, result.candidate_name)}
-              >
-                <DownloadIcon className="h-3 w-3" />
-                Download Resume
-              </Button>
             </div>
           </CardContent>
         </Card>
