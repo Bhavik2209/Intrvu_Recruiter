@@ -257,7 +257,7 @@ REMEMBER:
 
     // Override AI response for first-time job description
     if (isFirstJobDescription) {
-      parsedResponse.ai_response_text = "I have successfully analyzed the job posting and found candidates from our talent pool that are best matches."
+      parsedResponse.ai_response_text = "I have successfully analyzed the job posting and will now look for matching candidates."
       parsedResponse.trigger_resume_matching = true
     }
 

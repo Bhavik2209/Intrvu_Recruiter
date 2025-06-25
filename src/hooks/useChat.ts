@@ -33,14 +33,14 @@ export const useChat = (userId: string | undefined) => {
           await messageOperations.addMessage(
             activeChatId,
             userId,
-            "We have found some matching candidates.",
+            "We have found some candidates that are best match to your job posting.",
             'ai'
           )
           
           await messageOperations.addMessage(
             activeChatId,
             userId,
-            "You can further help with refining the candidate search.",
+            "I can further help with refining the candidate search.",
             'ai'
           )
           
