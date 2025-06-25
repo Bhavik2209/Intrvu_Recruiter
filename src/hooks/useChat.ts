@@ -10,8 +10,49 @@ export const useChat = (userId: string | undefined) => {
   const [sendingMessage, setSendingMessage] = useState(false)
   const [uploadingFile, setUploadingFile] = useState(false)
   const [parsingFile, setParsingFile] = useState(false)
+  const [hasAnnouncedMatches, setHasAnnouncedMatches] = useState(false)
   
   const { analyzeResumes, results: matchingResults, loading: matchingLoading } = useResumeMatching()
+
+  // Reset match announcement state when active chat changes
+  useEffect(() => {
+    setHasAnnouncedMatches(false)
+  }, [activeChatId])
+
+  // Handle post-matching announcements
+  useEffect(() => {
+    const announceMatches = async () => {
+      if (!activeChatId || !userId || hasAnnouncedMatches) return
+      
+      if (matchingResults && 
+          matchingResults.matches && 
+          matchingResults.matches.length > 0) {
+        
+        try {
+          // Add the announcement messages
+          await messageOperations.addMessage(
+            activeChatId,
+            userId,
+            "We have found some matching candidates.",
+            'ai'
+          )
+          
+          await messageOperations.addMessage(
+            activeChatId,
+            userId,
+            "You can further help with refining the candidate search.",
+            'ai'
+          )
+          
+          setHasAnnouncedMatches(true)
+        } catch (error) {
+          console.error('Error adding match announcement messages:', error)
+        }
+      }
+    }
+
+    announceMatches()
+  }, [matchingResults, activeChatId, userId, hasAnnouncedMatches])
 
   // Load user's chats
   const loadChats = useCallback(async () => {
@@ -222,7 +263,8 @@ export const useChat = (userId: string | undefined) => {
         trigger_resume_matching, 
         job_description,
         title_updated,
-        new_title
+        new_title,
+        is_first_job_description
       } = await response.json()
       
       // Add AI message to local state

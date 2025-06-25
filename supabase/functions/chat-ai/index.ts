@@ -87,6 +87,9 @@ serve(async (req) => {
       )
     }
 
+    // Store original job description to detect first-time job posting
+    const originalJobDescription = chat.job_description
+
     // Prepare conversation context
     const conversationHistory = messages.map(msg => ({
       role: msg.type === 'user' ? 'user' : 'assistant',
@@ -247,6 +250,17 @@ REMEMBER:
       }
     }
 
+    // Check if this is the first time a job description is being provided
+    const isFirstJobDescription = parsedResponse.message_type === 'job_description' && 
+                                  parsedResponse.extracted_job_description && 
+                                  (!originalJobDescription || originalJobDescription.trim() === '')
+
+    // Override AI response for first-time job description
+    if (isFirstJobDescription) {
+      parsedResponse.ai_response_text = "I have successfully analyzed the job posting and found candidates from our talent pool that are best matches."
+      parsedResponse.trigger_resume_matching = true
+    }
+
     // Update job description and title in chat if detected
     let titleUpdated = false
     if (parsedResponse.message_type === 'job_description') {
@@ -315,7 +329,8 @@ REMEMBER:
         new_title: parsedResponse.extracted_job_title || null,
         trigger_resume_matching: parsedResponse.trigger_resume_matching || false,
         job_description: chat.job_description || parsedResponse.extracted_job_description,
-        message_type: parsedResponse.message_type
+        message_type: parsedResponse.message_type,
+        is_first_job_description: isFirstJobDescription
       }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
