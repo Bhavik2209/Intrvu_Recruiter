@@ -178,26 +178,6 @@ export const CandidateSearchSection = ({
               </Badge>
             </div>
 
-            {/* Score Breakdown */}
-            <div className="grid grid-cols-2 gap-3 mb-4 text-xs">
-              <div className="bg-gray-50 rounded p-2">
-                <p className="text-gray-500 mb-1">Keywords & Context</p>
-                <p className="text-gray-800 font-medium">{result.keyword_score}/25 points</p>
-              </div>
-              <div className="bg-gray-50 rounded p-2">
-                <p className="text-gray-500 mb-1">Experience</p>
-                <p className="text-gray-800 font-medium">{result.experience_score}/35 points</p>
-              </div>
-              <div className="bg-gray-50 rounded p-2">
-                <p className="text-gray-500 mb-1">Education</p>
-                <p className="text-gray-800 font-medium">{result.education_score}/20 points</p>
-              </div>
-              <div className="bg-gray-50 rounded p-2">
-                <p className="text-gray-500 mb-1">Skills & Tools</p>
-                <p className="text-gray-800 font-medium">{result.skills_score}/20 points</p>
-              </div>
-            </div>
-
             {/* Analysis Summary */}
             <div className="bg-blue-50 border border-blue-200 rounded p-3 mb-4">
               <h4 className="text-blue-700 text-xs font-medium mb-2">Match Analysis</h4>
