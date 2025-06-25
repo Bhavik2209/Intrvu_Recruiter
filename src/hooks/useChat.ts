@@ -19,7 +19,7 @@ export const useChat = (userId: string | undefined) => {
     setHasAnnouncedMatches(false)
   }, [activeChatId])
 
-  // Handle post-matching announcements
+  // Handle post-matching announcements with optimistic updates
   useEffect(() => {
     const announceMatches = async () => {
       if (!activeChatId || !userId || hasAnnouncedMatches) return
@@ -29,7 +29,37 @@ export const useChat = (userId: string | undefined) => {
           matchingResults.matches.length > 0) {
         
         try {
-          // Add the announcement messages
+          // Create optimistic messages
+          const tempId1 = `temp_${Date.now()}_1`
+          const tempId2 = `temp_${Date.now()}_2`
+          const currentTime = new Date().toISOString()
+          
+          const optimisticMessage1: ChatMessage = {
+            id: tempId1,
+            chat_id: activeChatId,
+            user_id: userId,
+            content: "We have found some candidates that are best match to your job posting.",
+            type: 'ai',
+            created_at: currentTime,
+            updated_at: currentTime,
+            tempId: tempId1
+          }
+          
+          const optimisticMessage2: ChatMessage = {
+            id: tempId2,
+            chat_id: activeChatId,
+            user_id: userId,
+            content: "I can further help with refining the candidate search.",
+            type: 'ai',
+            created_at: new Date(Date.now() + 100).toISOString(), // Slight delay for ordering
+            updated_at: new Date(Date.now() + 100).toISOString(),
+            tempId: tempId2
+          }
+          
+          // Add optimistic messages immediately to UI
+          setMessages(prev => [...prev, optimisticMessage1, optimisticMessage2])
+          
+          // Then send to database (these will replace the optimistic messages via real-time subscription)
           await messageOperations.addMessage(
             activeChatId,
             userId,
@@ -47,6 +77,8 @@ export const useChat = (userId: string | undefined) => {
           setHasAnnouncedMatches(true)
         } catch (error) {
           console.error('Error adding match announcement messages:', error)
+          // Remove optimistic messages on error
+          setMessages(prev => prev.filter(msg => !msg.tempId))
         }
       }
     }
@@ -222,13 +254,31 @@ export const useChat = (userId: string | undefined) => {
     }
   }, [activeChatId, userId])
 
-  // Send message
+  // Send message with optimistic updates
   const sendMessage = useCallback(async (content: string) => {
     if (!activeChatId || !userId || !content.trim()) return
 
     setSendingMessage(true)
     
     try {
+      // Create optimistic user message
+      const tempId = `temp_${Date.now()}`
+      const currentTime = new Date().toISOString()
+      
+      const optimisticUserMessage: ChatMessage = {
+        id: tempId,
+        chat_id: activeChatId,
+        user_id: userId,
+        content: content.trim(),
+        type: 'user',
+        created_at: currentTime,
+        updated_at: currentTime,
+        tempId: tempId
+      }
+      
+      // Add optimistic message immediately to UI
+      setMessages(prev => [...prev, optimisticUserMessage])
+
       // Add user message to database
       const userMessage = await messageOperations.addMessage(
         activeChatId,
@@ -236,9 +286,6 @@ export const useChat = (userId: string | undefined) => {
         content.trim(),
         'user'
       )
-
-      // Add to local state immediately
-      setMessages(prev => [...prev, userMessage])
 
       // Call AI function to generate response
       const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat-ai`, {
@@ -267,8 +314,20 @@ export const useChat = (userId: string | undefined) => {
         is_first_job_description
       } = await response.json()
       
-      // Add AI message to local state
-      setMessages(prev => [...prev, aiMessage])
+      // Add AI message optimistically
+      const aiTempId = `temp_${Date.now()}_ai`
+      const optimisticAiMessage: ChatMessage = {
+        id: aiTempId,
+        chat_id: activeChatId,
+        user_id: userId,
+        content: aiMessage.content,
+        type: 'ai',
+        created_at: aiMessage.created_at,
+        updated_at: aiMessage.updated_at,
+        tempId: aiTempId
+      }
+      
+      setMessages(prev => [...prev, optimisticAiMessage])
 
       // Update chat title in local state if it was updated
       if (title_updated && new_title) {
@@ -287,23 +346,39 @@ export const useChat = (userId: string | undefined) => {
 
     } catch (error) {
       console.error('Error sending message:', error)
-      // You might want to show an error message to the user here
+      // Remove optimistic messages on error
+      setMessages(prev => prev.filter(msg => !msg.tempId))
     } finally {
       setSendingMessage(false)
     }
   }, [activeChatId, userId, analyzeResumes])
 
-  // Set up real-time subscription for active chat
+  // Set up real-time subscription for active chat with optimistic update handling
   useEffect(() => {
     if (!activeChatId) return
 
     const subscription = messageOperations.subscribeToChat(activeChatId, (newMessage) => {
       setMessages(prev => {
-        // Avoid duplicates
-        if (prev.some(msg => msg.id === newMessage.id)) {
-          return prev
+        // Check if this message replaces an optimistic message
+        const optimisticIndex = prev.findIndex(msg => 
+          msg.tempId && 
+          msg.content === newMessage.content && 
+          msg.type === newMessage.type
+        )
+        
+        if (optimisticIndex !== -1) {
+          // Replace optimistic message with real message
+          const updated = [...prev]
+          updated[optimisticIndex] = newMessage
+          return updated
+        } else {
+          // Check for duplicate by ID
+          if (prev.some(msg => msg.id === newMessage.id)) {
+            return prev
+          }
+          // Add new message
+          return [...prev, newMessage]
         }
-        return [...prev, newMessage]
       })
     })
 

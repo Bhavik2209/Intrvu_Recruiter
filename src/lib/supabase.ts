@@ -47,6 +47,7 @@ export interface ChatMessage {
   type: 'user' | 'ai'
   created_at: string
   updated_at: string
+  tempId?: string // For optimistic updates
 }
 
 // Helper functions for chat operations
