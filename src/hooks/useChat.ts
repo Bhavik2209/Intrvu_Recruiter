@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase, chatOperations, messageOperations, Chat, ChatMessage } from '../lib/supabase'
-import { useResumeMatching } from './useResumeMatching'
+import { useResumeMatching, MatchingResults } from './useResumeMatching'
 
 export const useChat = (userId: string | undefined) => {
   const [chats, setChats] = useState<Chat[]>([])
@@ -12,12 +12,24 @@ export const useChat = (userId: string | undefined) => {
   const [parsingFile, setParsingFile] = useState(false)
   const [hasAnnouncedMatches, setHasAnnouncedMatches] = useState(false)
   
-  const { analyzeResumes, results: matchingResults, loading: matchingLoading } = useResumeMatching()
+  // In-memory cache for matching results per chat
+  const [chatSpecificMatchingResults, setChatSpecificMatchingResults] = useState<Record<string, MatchingResults>>({})
+  
+  const { analyzeResumes, results: matchingResults, loading: matchingLoading, setDisplayedResults } = useResumeMatching()
 
-  // Reset match announcement state when active chat changes
+  // Handle chat switching - load cached results for the active chat
   useEffect(() => {
-    setHasAnnouncedMatches(false)
-  }, [activeChatId])
+    if (activeChatId) {
+      // Load cached results for this chat, or null if no results exist
+      const cachedResults = chatSpecificMatchingResults[activeChatId] || null
+      setDisplayedResults(cachedResults)
+      setHasAnnouncedMatches(false) // Reset announcement flag for new chat
+    } else {
+      // No active chat, clear displayed results
+      setDisplayedResults(null)
+      setHasAnnouncedMatches(false)
+    }
+  }, [activeChatId, chatSpecificMatchingResults, setDisplayedResults])
 
   // Handle post-matching announcements with optimistic updates
   useEffect(() => {
@@ -161,6 +173,13 @@ export const useChat = (userId: string | undefined) => {
     try {
       await chatOperations.deleteChat(chatId)
       setChats(prev => prev.filter(chat => chat.id !== chatId))
+      
+      // Remove cached results for deleted chat
+      setChatSpecificMatchingResults(prev => {
+        const updated = { ...prev }
+        delete updated[chatId]
+        return updated
+      })
       
       // If deleted chat was active, select another one or create a new one
       if (activeChatId === chatId) {
@@ -341,7 +360,15 @@ export const useChat = (userId: string | undefined) => {
       // Trigger resume matching if requested
       if (trigger_resume_matching && job_description) {
         console.log('Triggering resume matching with job description:', job_description)
-        await analyzeResumes(job_description, activeChatId)
+        const matchingResults = await analyzeResumes(job_description, activeChatId)
+        
+        // Cache the results for this specific chat
+        if (matchingResults) {
+          setChatSpecificMatchingResults(prev => ({
+            ...prev,
+            [activeChatId]: matchingResults
+          }))
+        }
       }
 
     } catch (error) {

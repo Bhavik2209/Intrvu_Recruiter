@@ -43,37 +43,15 @@ export interface MatchingResults {
   qualifying_matches: number
 }
 
-const CACHE_KEY = 'intrvurecruiter_matching_results'
-
 export const useResumeMatching = () => {
   const [loading, setLoading] = useState(false)
-  const [results, setResults] = useState<MatchingResults | null>(() => {
-    // Initialize from localStorage if available
-    try {
-      const cached = localStorage.getItem(CACHE_KEY)
-      return cached ? JSON.parse(cached) : null
-    } catch (error) {
-      console.error('Error loading cached results:', error)
-      return null
-    }
-  })
+  const [results, setResults] = useState<MatchingResults | null>(null)
   const [error, setError] = useState<string | null>(null)
 
-  // Cache results to localStorage whenever they change
-  useEffect(() => {
-    if (results) {
-      try {
-        localStorage.setItem(CACHE_KEY, JSON.stringify(results))
-      } catch (error) {
-        console.error('Error caching results:', error)
-      }
-    }
-  }, [results])
-
-  const analyzeResumes = async (jobDescription: string, chatId?: string) => {
+  const analyzeResumes = async (jobDescription: string, chatId?: string): Promise<MatchingResults | null> => {
     if (!jobDescription.trim()) {
       setError('Job description is required')
-      return
+      return null
     }
 
     setLoading(true)
@@ -99,23 +77,25 @@ export const useResumeMatching = () => {
 
       const data = await response.json()
       setResults(data)
+      return data
     } catch (err) {
       console.error('Error analyzing resumes:', err)
-      setError(err instanceof Error ? err.message : 'Failed to analyze resumes')
+      const errorMessage = err instanceof Error ? err.message : 'Failed to analyze resumes'
+      setError(errorMessage)
+      return null
     } finally {
       setLoading(false)
     }
   }
 
+  const setDisplayedResults = (newResults: MatchingResults | null) => {
+    setResults(newResults)
+    setError(null)
+  }
+
   const clearResults = () => {
     setResults(null)
     setError(null)
-    // Also clear from localStorage
-    try {
-      localStorage.removeItem(CACHE_KEY)
-    } catch (error) {
-      console.error('Error clearing cached results:', error)
-    }
   }
 
   return {
@@ -123,6 +103,7 @@ export const useResumeMatching = () => {
     results,
     error,
     analyzeResumes,
+    setDisplayedResults,
     clearResults,
   }
 }
