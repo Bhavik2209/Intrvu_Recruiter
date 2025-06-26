@@ -29,11 +29,54 @@ export interface Candidate {
   updated_at: string
 }
 
+// Import MatchingResults type from useResumeMatching
+export interface MatchingResults {
+  matches: Array<{
+    candidate_id: string
+    candidate_name: string
+    candidate_email: string
+    candidate_title?: string
+    linkedin_url?: string
+    match_score: number
+    keyword_score: number
+    experience_score: number
+    education_score: number
+    skills_score: number
+    analysis: {
+      keyword_analysis: {
+        strong_matches: string[]
+        partial_matches: string[]
+        missing_keywords: string[]
+      }
+      experience_analysis: {
+        strong_match_experience: string[]
+        partial_match_experience: string[]
+        missing_experience: string[]
+      }
+      education_analysis: {
+        matching_qualifications: string[]
+        additional_qualifications: string[]
+        gaps: string[]
+      }
+      skills_analysis: {
+        matching_technical_skills: string[]
+        matching_soft_skills: string[]
+        matching_tools: string[]
+        missing_critical_skills: string[]
+      }
+      summary: string
+    }
+  }>
+  total_candidates_analyzed: number
+  qualifying_matches: number
+}
+
 export interface Chat {
   id: string
   user_id: string
   title: string
   job_description?: string
+  matching_results?: MatchingResults
   status: 'active' | 'archived' | 'completed'
   created_at: string
   updated_at: string
@@ -95,8 +138,8 @@ export const chatOperations = {
     return data
   },
 
-  // Update chat title or job description
-  async updateChat(chatId: string, updates: Partial<Pick<Chat, 'title' | 'job_description' | 'status'>>): Promise<Chat> {
+  // Update chat title, job description, or matching results
+  async updateChat(chatId: string, updates: Partial<Pick<Chat, 'title' | 'job_description' | 'status' | 'matching_results'>>): Promise<Chat> {
     const { data, error } = await supabase
       .from('chats')
       .update(updates)

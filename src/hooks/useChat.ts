@@ -11,96 +11,23 @@ export const useChat = (userId: string | undefined) => {
   const [uploadingFile, setUploadingFile] = useState(false)
   const [parsingFile, setParsingFile] = useState(false)
   
-  // Track which chats have already had their matching results announced
-  const [announcedChatIds, setAnnouncedChatIds] = useState<Set<string>>(new Set())
-  
-  // In-memory cache for matching results per chat
-  const [chatSpecificMatchingResults, setChatSpecificMatchingResults] = useState<Record<string, MatchingResults>>({})
-  
   const { analyzeResumes, results: matchingResults, loading: matchingLoading, setDisplayedResults } = useResumeMatching()
 
-  // Handle chat switching - load cached results for the active chat
+  // Handle chat switching - load matching results from database for the active chat
   useEffect(() => {
     if (activeChatId) {
-      // Load cached results for this chat, or null if no results exist
-      const cachedResults = chatSpecificMatchingResults[activeChatId] || null
-      setDisplayedResults(cachedResults)
+      // Find the active chat and load its matching results
+      const activeChat = chats.find(chat => chat.id === activeChatId)
+      if (activeChat && activeChat.matching_results) {
+        setDisplayedResults(activeChat.matching_results)
+      } else {
+        setDisplayedResults(null)
+      }
     } else {
       // No active chat, clear displayed results
       setDisplayedResults(null)
     }
-  }, [activeChatId, chatSpecificMatchingResults, setDisplayedResults])
-
-  // Handle post-matching announcements with optimistic updates
-  useEffect(() => {
-    const announceMatches = async () => {
-      if (!activeChatId || !userId) return
-      
-      // Check if we've already announced matches for this chat
-      if (announcedChatIds.has(activeChatId)) return
-      
-      if (matchingResults && 
-          matchingResults.matches && 
-          matchingResults.matches.length > 0) {
-        
-        try {
-          // Create optimistic messages
-          const tempId1 = `temp_${Date.now()}_1`
-          const tempId2 = `temp_${Date.now()}_2`
-          const currentTime = new Date().toISOString()
-          
-          const optimisticMessage1: ChatMessage = {
-            id: tempId1,
-            chat_id: activeChatId,
-            user_id: userId,
-            content: "We have found some candidates that are best match to your job posting.",
-            type: 'ai',
-            created_at: currentTime,
-            updated_at: currentTime,
-            tempId: tempId1
-          }
-          
-          const optimisticMessage2: ChatMessage = {
-            id: tempId2,
-            chat_id: activeChatId,
-            user_id: userId,
-            content: "I can further help with refining the candidate search.",
-            type: 'ai',
-            created_at: new Date(Date.now() + 100).toISOString(), // Slight delay for ordering
-            updated_at: new Date(Date.now() + 100).toISOString(),
-            tempId: tempId2
-          }
-          
-          // Add optimistic messages immediately to UI
-          setMessages(prev => [...prev, optimisticMessage1, optimisticMessage2])
-          
-          // Then send to database (these will replace the optimistic messages via real-time subscription)
-          await messageOperations.addMessage(
-            activeChatId,
-            userId,
-            "We have found some candidates that are best match to your job posting.",
-            'ai'
-          )
-          
-          await messageOperations.addMessage(
-            activeChatId,
-            userId,
-            "I can further help with refining the candidate search.",
-            'ai'
-          )
-          
-          // Mark this chat as having had its matches announced
-          setAnnouncedChatIds(prev => new Set(prev).add(activeChatId))
-        } catch (error) {
-          console.error('Error adding match announcement messages:', error)
-          // Remove optimistic messages on error
-          setMessages(prev => prev.filter(msg => !msg.tempId))
-        }
-      }
-    }
-
-    announceMatches()
-  }, [matchingResults, activeChatId, userId, announcedChatIds])
+  }, [activeChatId, chats, setDisplayedResults])
 
   // Load user's chats
   const loadChats = useCallback(async () => {
@@ -177,20 +104,6 @@ export const useChat = (userId: string | undefined) => {
     try {
       await chatOperations.deleteChat(chatId)
       setChats(prev => prev.filter(chat => chat.id !== chatId))
-      
-      // Remove cached results for deleted chat
-      setChatSpecificMatchingResults(prev => {
-        const updated = { ...prev }
-        delete updated[chatId]
-        return updated
-      })
-      
-      // Remove from announced chats set
-      setAnnouncedChatIds(prev => {
-        const updated = new Set(prev)
-        updated.delete(chatId)
-        return updated
-      })
       
       // If deleted chat was active, select another one or create a new one
       if (activeChatId === chatId) {
@@ -373,12 +286,36 @@ export const useChat = (userId: string | undefined) => {
         console.log('Triggering resume matching with job description:', job_description)
         const matchingResults = await analyzeResumes(job_description, activeChatId)
         
-        // Cache the results for this specific chat
+        // Store the results in the database for this chat
         if (matchingResults) {
-          setChatSpecificMatchingResults(prev => ({
-            ...prev,
-            [activeChatId]: matchingResults
-          }))
+          try {
+            const updatedChat = await chatOperations.updateChat(activeChatId, { 
+              matching_results: matchingResults 
+            })
+            
+            // Update local chat state with the new matching results
+            setChats(prev => prev.map(chat => 
+              chat.id === activeChatId ? updatedChat : chat
+            ))
+
+            // Add announcement messages to database (they will persist)
+            await messageOperations.addMessage(
+              activeChatId,
+              userId,
+              "We have found some candidates that are best match to your job posting.",
+              'ai'
+            )
+            
+            await messageOperations.addMessage(
+              activeChatId,
+              userId,
+              "I can further help with refining the candidate search.",
+              'ai'
+            )
+            
+          } catch (error) {
+            console.error('Error storing matching results:', error)
+          }
         }
       }
 
