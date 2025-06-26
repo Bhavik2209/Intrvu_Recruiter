@@ -10,7 +10,9 @@ export const useChat = (userId: string | undefined) => {
   const [sendingMessage, setSendingMessage] = useState(false)
   const [uploadingFile, setUploadingFile] = useState(false)
   const [parsingFile, setParsingFile] = useState(false)
-  const [hasAnnouncedMatches, setHasAnnouncedMatches] = useState(false)
+  
+  // Track which chats have already had their matching results announced
+  const [announcedChatIds, setAnnouncedChatIds] = useState<Set<string>>(new Set())
   
   // In-memory cache for matching results per chat
   const [chatSpecificMatchingResults, setChatSpecificMatchingResults] = useState<Record<string, MatchingResults>>({})
@@ -23,18 +25,19 @@ export const useChat = (userId: string | undefined) => {
       // Load cached results for this chat, or null if no results exist
       const cachedResults = chatSpecificMatchingResults[activeChatId] || null
       setDisplayedResults(cachedResults)
-      setHasAnnouncedMatches(false) // Reset announcement flag for new chat
     } else {
       // No active chat, clear displayed results
       setDisplayedResults(null)
-      setHasAnnouncedMatches(false)
     }
   }, [activeChatId, chatSpecificMatchingResults, setDisplayedResults])
 
   // Handle post-matching announcements with optimistic updates
   useEffect(() => {
     const announceMatches = async () => {
-      if (!activeChatId || !userId || hasAnnouncedMatches) return
+      if (!activeChatId || !userId) return
+      
+      // Check if we've already announced matches for this chat
+      if (announcedChatIds.has(activeChatId)) return
       
       if (matchingResults && 
           matchingResults.matches && 
@@ -86,7 +89,8 @@ export const useChat = (userId: string | undefined) => {
             'ai'
           )
           
-          setHasAnnouncedMatches(true)
+          // Mark this chat as having had its matches announced
+          setAnnouncedChatIds(prev => new Set(prev).add(activeChatId))
         } catch (error) {
           console.error('Error adding match announcement messages:', error)
           // Remove optimistic messages on error
@@ -96,7 +100,7 @@ export const useChat = (userId: string | undefined) => {
     }
 
     announceMatches()
-  }, [matchingResults, activeChatId, userId, hasAnnouncedMatches])
+  }, [matchingResults, activeChatId, userId, announcedChatIds])
 
   // Load user's chats
   const loadChats = useCallback(async () => {
@@ -178,6 +182,13 @@ export const useChat = (userId: string | undefined) => {
       setChatSpecificMatchingResults(prev => {
         const updated = { ...prev }
         delete updated[chatId]
+        return updated
+      })
+      
+      // Remove from announced chats set
+      setAnnouncedChatIds(prev => {
+        const updated = new Set(prev)
+        updated.delete(chatId)
         return updated
       })
       
