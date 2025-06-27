@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { FigmaDesign } from "./screens/FigmaDesign/FigmaDesign";
 import { SignIn, SignUp } from "./screens/Auth";
+import { CandidateLandingPage } from "./screens/LandingPage";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { useAuth } from "./hooks/useAuth";
 
@@ -23,6 +24,9 @@ const AppRoutes = () => {
 
   return (
     <Routes>
+      {/* Public landing page */}
+      <Route path="/landing" element={<CandidateLandingPage />} />
+      
       {/* Public routes - only accessible when not authenticated */}
       <Route 
         path="/signin" 
@@ -46,7 +50,7 @@ const AppRoutes = () => {
       {/* Catch all route - redirect based on auth status */}
       <Route 
         path="*" 
-        element={<Navigate to={user ? "/" : "/signin"} replace />} 
+        element={<Navigate to={user ? "/" : "/landing"} replace />} 
       />
     </Routes>
   );
