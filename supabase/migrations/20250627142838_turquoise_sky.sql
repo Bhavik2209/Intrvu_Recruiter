@@ -1,0 +1,68 @@
+/*
+  # Storage bucket setup for resume files
+
+  1. Storage Configuration
+    - Create resumes bucket with proper settings
+    - Set up storage policies for file access
+
+  2. Security
+    - Allow anonymous and authenticated uploads
+    - Enable public read access for resume files
+    - Proper file size and type restrictions
+*/
+
+-- Create the resumes bucket if it doesn't exist
+INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+VALUES (
+  'resumes',
+  'resumes',
+  true,
+  10485760, -- 10MB limit
+  ARRAY['application/pdf', 'text/plain', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document']
+)
+ON CONFLICT (id) DO UPDATE SET
+  public = EXCLUDED.public,
+  file_size_limit = EXCLUDED.file_size_limit,
+  allowed_mime_types = EXCLUDED.allowed_mime_types;
+
+-- Drop existing policies if they exist to avoid conflicts
+DROP POLICY IF EXISTS "Allow anonymous resume uploads" ON storage.objects;
+DROP POLICY IF EXISTS "Allow public resume reads" ON storage.objects;
+DROP POLICY IF EXISTS "Allow authenticated resume uploads" ON storage.objects;
+DROP POLICY IF EXISTS "Allow authenticated resume updates" ON storage.objects;
+DROP POLICY IF EXISTS "Allow authenticated resume deletes" ON storage.objects;
+
+-- Allow anonymous users to upload files to the resumes bucket
+CREATE POLICY "Allow anonymous resume uploads"
+ON storage.objects
+FOR INSERT
+TO anon
+WITH CHECK (bucket_id = 'resumes');
+
+-- Allow public read access to resume files
+CREATE POLICY "Allow public resume reads"
+ON storage.objects
+FOR SELECT
+TO public
+USING (bucket_id = 'resumes');
+
+-- Allow authenticated users to upload files to the resumes bucket
+CREATE POLICY "Allow authenticated resume uploads"
+ON storage.objects
+FOR INSERT
+TO authenticated
+WITH CHECK (bucket_id = 'resumes');
+
+-- Allow authenticated users to update files in the resumes bucket
+CREATE POLICY "Allow authenticated resume updates"
+ON storage.objects
+FOR UPDATE
+TO authenticated
+USING (bucket_id = 'resumes');
+
+-- Allow authenticated users to delete files in the resumes bucket
+CREATE POLICY "Allow authenticated resume deletes"
+ON storage.objects
+FOR DELETE
+TO authenticated
+USING (bucket_id = 'resumes');
