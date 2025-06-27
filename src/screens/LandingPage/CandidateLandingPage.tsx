@@ -507,7 +507,7 @@ export const CandidateLandingPage = (): JSX.Element => {
                 <Button 
                   variant="outline" 
                   size="lg"
-                  className="border-2 border-white text-white hover:bg-white hover:text-blue-600 px-8 py-4 text-lg font-semibold rounded-lg"
+                  className="border-2 border-white bg-white text-blue-600 hover:bg-gray-100 hover:text-blue-700 px-8 py-4 text-lg font-semibold rounded-lg"
                   onClick={resetForm}
                 >
                   Submit Resume
