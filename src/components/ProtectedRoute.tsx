@@ -21,7 +21,7 @@ export const ProtectedRoute = ({ children }: ProtectedRouteProps): JSX.Element =
   }
 
   if (!user) {
-    return <Navigate to="/" replace />
+    return <Navigate to="/signin" replace />
   }
 
   return <>{children}</>
