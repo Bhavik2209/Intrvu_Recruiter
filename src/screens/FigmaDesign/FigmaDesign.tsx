@@ -4,6 +4,7 @@ import { Button } from "../../components/ui/button";
 import { AutoResizeTextarea } from "../../components/AutoResizeTextarea";
 import { FileUploadArea, FileUploadAreaRef } from "../../components/FileUploadArea";
 import { WelcomePopup } from "../../components/WelcomePopup";
+import { BoltBadge } from "../../components/BoltBadge";
 import { CandidateSearchSection } from "./sections/CandidateSearchSection";
 import { JobDescriptionSection } from "./sections/JobDescriptionSection";
 import { MatchingCandidatesSection } from "./sections/MatchingCandidatesSection";
@@ -342,13 +343,16 @@ export const FigmaDesign = (): JSX.Element => {
             {/* Matching Candidates Header */}
             <div className="bg-blue-500 text-white p-4 flex-shrink-0">
               <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="font-medium">Matching Candidates</h2>
-                  <p className="text-sm text-blue-100">
-                    {matchingLoading ? 'Analyzing resumes...' : 
-                     hasMatches ? `${candidateCount} candidates found (50%+ match)` : 
-                     'Start a search to find candidates'}
-                  </p>
+                <div className="flex items-center gap-3">
+                  <div>
+                    <h2 className="font-medium">Matching Candidates</h2>
+                    <p className="text-sm text-blue-100">
+                      {matchingLoading ? 'Analyzing resumes...' : 
+                       hasMatches ? `${candidateCount} candidates found (50%+ match)` : 
+                       'Start a search to find candidates'}
+                    </p>
+                  </div>
+                  <BoltBadge className="ml-auto" />
                 </div>
                 <Button
                   variant="ghost"

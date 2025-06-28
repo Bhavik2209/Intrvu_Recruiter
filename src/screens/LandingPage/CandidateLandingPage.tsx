@@ -4,6 +4,7 @@ import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Card, CardContent } from '../../components/ui/card';
 import { FileUploadArea, FileUploadAreaRef } from '../../components/FileUploadArea';
+import { BoltBadge } from '../../components/BoltBadge';
 import {
   Dialog,
   DialogContent,
@@ -151,6 +152,7 @@ export const CandidateLandingPage = (): JSX.Element => {
                   Get Started
                 </Button>
               </Link>
+              <BoltBadge />
             </div>
           </div>
         </div>
