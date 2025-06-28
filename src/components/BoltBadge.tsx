@@ -2,11 +2,18 @@ import React from 'react';
 
 interface BoltBadgeProps {
   className?: string;
+  size?: 'sm' | 'md' | 'lg';
 }
 
-export const BoltBadge = ({ className = "" }: BoltBadgeProps): JSX.Element => {
+export const BoltBadge = ({ className = "", size = 'md' }: BoltBadgeProps): JSX.Element => {
   const handleClick = () => {
     window.open('https://bolt.new/', '_blank', 'noopener,noreferrer');
+  };
+
+  const sizeClasses = {
+    sm: 'w-8 h-8',
+    md: 'w-12 h-12', 
+    lg: 'w-16 h-16'
   };
 
   return (
@@ -19,7 +26,7 @@ export const BoltBadge = ({ className = "" }: BoltBadgeProps): JSX.Element => {
       <img
         src="/black_circle_360x360.png"
         alt="Powered by Bolt.new"
-        className="w-12 h-12 rounded-full"
+        className={`${sizeClasses[size]} rounded-full`}
       />
     </button>
   );

@@ -152,7 +152,7 @@ export const CandidateLandingPage = (): JSX.Element => {
                   Get Started
                 </Button>
               </Link>
-              <BoltBadge />
+              <BoltBadge size="lg" />
             </div>
           </div>
         </div>
@@ -525,7 +525,10 @@ export const CandidateLandingPage = (): JSX.Element => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid md:grid-cols-4 gap-8">
             <div>
-              <h3 className="text-xl font-bold mb-4">IntrvuRecruiter</h3>
+              <div className="flex items-center gap-3 mb-4">
+                <h3 className="text-xl font-bold">IntrvuRecruiter</h3>
+                <BoltBadge size="sm" />
+              </div>
               <p className="text-gray-400 leading-relaxed">
                 Connecting top talent with leading companies through intelligent AI-powered matching.
               </p>

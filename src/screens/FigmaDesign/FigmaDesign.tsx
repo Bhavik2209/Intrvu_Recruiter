@@ -211,14 +211,17 @@ export const FigmaDesign = (): JSX.Element => {
         {/* Header */}
         <div className="bg-white border-b border-gray-200 p-4 flex-shrink-0">
           <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-lg font-medium text-gray-800">IntrvuRecruiter</h1>
-              <p className="text-sm text-gray-500">
-                {activeChatId ? 
-                  chats.find(chat => chat.id === activeChatId)?.title || 'AI-powered candidate search' :
-                  'AI-powered candidate search'
-                }
-              </p>
+            <div className="flex items-center gap-4">
+              <div>
+                <h1 className="text-lg font-medium text-gray-800">IntrvuRecruiter</h1>
+                <p className="text-sm text-gray-500">
+                  {activeChatId ? 
+                    chats.find(chat => chat.id === activeChatId)?.title || 'AI-powered candidate search' :
+                    'AI-powered candidate search'
+                  }
+                </p>
+              </div>
+              <BoltBadge size="lg" />
             </div>
             <div className="flex items-center gap-3">
               <div className="text-right">
@@ -343,16 +346,13 @@ export const FigmaDesign = (): JSX.Element => {
             {/* Matching Candidates Header */}
             <div className="bg-blue-500 text-white p-4 flex-shrink-0">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div>
-                    <h2 className="font-medium">Matching Candidates</h2>
-                    <p className="text-sm text-blue-100">
-                      {matchingLoading ? 'Analyzing resumes...' : 
-                       hasMatches ? `${candidateCount} candidates found (50%+ match)` : 
-                       'Start a search to find candidates'}
-                    </p>
-                  </div>
-                  <BoltBadge className="ml-auto" />
+                <div>
+                  <h2 className="font-medium">Matching Candidates</h2>
+                  <p className="text-sm text-blue-100">
+                    {matchingLoading ? 'Analyzing resumes...' : 
+                     hasMatches ? `${candidateCount} candidates found (50%+ match)` : 
+                     'Start a search to find candidates'}
+                  </p>
                 </div>
                 <Button
                   variant="ghost"
