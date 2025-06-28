@@ -19,7 +19,7 @@ export const BoltBadge = ({ className = "" }: BoltBadgeProps): JSX.Element => {
       <img
         src="/black_circle_360x360.png"
         alt="Powered by Bolt.new"
-        className="w-8 h-8 rounded-full"
+        className="w-12 h-12 rounded-full"
       />
     </button>
   );
