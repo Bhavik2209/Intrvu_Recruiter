@@ -24,22 +24,22 @@ const AppRoutes = () => {
 
   return (
     <Routes>
-      {/* Public landing page */}
-      <Route path="/landing" element={<CandidateLandingPage />} />
+      {/* Default landing page - accessible to everyone */}
+      <Route path="/" element={<CandidateLandingPage />} />
       
       {/* Public routes - only accessible when not authenticated */}
       <Route 
         path="/signin" 
-        element={user ? <Navigate to="/" replace /> : <SignIn />} 
+        element={user ? <Navigate to="/recruitment" replace /> : <SignIn />} 
       />
       <Route 
         path="/signup" 
-        element={user ? <Navigate to="/" replace /> : <SignUp />} 
+        element={user ? <Navigate to="/recruitment" replace /> : <SignUp />} 
       />
       
-      {/* Protected routes - only accessible when authenticated */}
+      {/* Protected recruitment dashboard - only accessible when authenticated */}
       <Route 
-        path="/" 
+        path="/recruitment" 
         element={
           <ProtectedRoute>
             <FigmaDesign />
@@ -47,10 +47,10 @@ const AppRoutes = () => {
         } 
       />
       
-      {/* Catch all route - redirect based on auth status */}
+      {/* Catch all route - redirect to landing page */}
       <Route 
         path="*" 
-        element={<Navigate to={user ? "/" : "/landing"} replace />} 
+        element={<Navigate to="/" replace />} 
       />
     </Routes>
   );
