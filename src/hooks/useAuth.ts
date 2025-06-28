@@ -161,13 +161,13 @@ export const useAuth = () => {
         console.log('Successfully signed out')
       }
       
-      // Force redirect to sign in page
-      window.location.href = '/signin'
+      // Force redirect to home page instead of signin
+      window.location.href = '/'
       
     } catch (error) {
       console.error('Error during sign out:', error)
       // Force redirect even if there's an error
-      window.location.href = '/signin'
+      window.location.href = '/'
     }
   }
 
