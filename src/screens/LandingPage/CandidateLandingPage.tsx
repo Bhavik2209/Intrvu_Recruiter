@@ -523,57 +523,22 @@ export const CandidateLandingPage = (): JSX.Element => {
       {/* Footer */}
       <footer className="bg-gray-900 text-white py-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid md:grid-cols-4 gap-8">
-            <div>
-              <div className="flex items-center gap-3 mb-4">
-                <h3 className="text-xl font-bold">IntrvuRecruiter</h3>
-                <BoltBadge size="sm" />
-              </div>
-              <p className="text-gray-400 leading-relaxed">
-                Connecting top talent with leading companies through intelligent AI-powered matching.
-              </p>
-            </div>
-            
-            <div>
-              <h4 className="font-semibold mb-4">For Job Seekers</h4>
-              <ul className="space-y-2 text-gray-400">
-                <li>Submit Resume</li>
-                <li>Browse Opportunities</li>
-                <li>Career Resources</li>
-                <li>Success Stories</li>
-              </ul>
-            </div>
-            
-            <div>
-              <h4 className="font-semibold mb-4">For Employers</h4>
-              <ul className="space-y-2 text-gray-400">
-                <li>Find Candidates</li>
-                <li>Post Jobs</li>
-                <li>Pricing Plans</li>
-                <li>Enterprise Solutions</li>
-              </ul>
-            </div>
-            
-            <div>
-              <h4 className="font-semibold mb-4">Company</h4>
-              <ul className="space-y-2 text-gray-400">
-                <li>About Us</li>
-                <li>Contact</li>
-                <li>Privacy Policy</li>
-                <li>Terms of Service</li>
-              </ul>
-            </div>
+          <div className="text-center">
+            <h3 className="text-xl font-bold mb-4">IntrvuRecruiter</h3>
           </div>
           
           {/* Powered by Bolt Section */}
           <div className="border-t border-gray-800 mt-8 pt-8">
             <div className="flex flex-col items-center justify-center space-y-4">
-              <img
-                src="/logotext_poweredby_360w.png"
-                alt="Powered by Bolt"
-                className="h-8 opacity-80 hover:opacity-100 transition-opacity duration-200 cursor-pointer"
-                onClick={() => window.open('https://bolt.new/', '_blank', 'noopener,noreferrer')}
-              />
+              <div className="flex items-center gap-3">
+                <img
+                  src="/logotext_poweredby_360w.png"
+                  alt="Powered by Bolt"
+                  className="h-8 opacity-80 hover:opacity-100 transition-opacity duration-200 cursor-pointer"
+                  onClick={() => window.open('https://bolt.new/', '_blank', 'noopener,noreferrer')}
+                />
+                <BoltBadge size="sm" />
+              </div>
               <p className="text-center text-gray-400">
                 &copy; 2025 IntrvuRecruiter. All rights reserved.
               </p>
