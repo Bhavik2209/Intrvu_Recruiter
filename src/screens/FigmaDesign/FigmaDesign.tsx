@@ -211,7 +211,7 @@ export const FigmaDesign = (): JSX.Element => {
         {/* Header */}
         <div className="bg-white border-b border-gray-200 p-4 flex-shrink-0">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
+            <div className="flex items-center justify-between w-full">
               <div>
                 <h1 className="text-lg font-medium text-gray-800">IntrvuRecruiter</h1>
                 <p className="text-sm text-gray-500">
@@ -221,22 +221,27 @@ export const FigmaDesign = (): JSX.Element => {
                   }
                 </p>
               </div>
-              <BoltBadge size="lg" />
-            </div>
-            <div className="flex items-center gap-3">
-              <div className="text-right">
-                <p className="text-sm font-medium text-gray-700">Welcome, {displayName}</p>
-                <p className="text-xs text-gray-500">Find the perfect candidates</p>
+              
+              {/* Centered Bolt Badge */}
+              <div className="flex-1 flex justify-center">
+                <BoltBadge size="lg" />
               </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleSignOut}
-                className="flex items-center gap-2 hover:bg-red-50 hover:border-red-200 hover:text-red-600"
-              >
-                <LogOutIcon className="h-4 w-4" />
-                Sign Out
-              </Button>
+              
+              <div className="flex items-center gap-3">
+                <div className="text-right">
+                  <p className="text-sm font-medium text-gray-700">Welcome, {displayName}</p>
+                  <p className="text-xs text-gray-500">Find the perfect candidates</p>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleSignOut}
+                  className="flex items-center gap-2 hover:bg-red-50 hover:border-red-200 hover:text-red-600"
+                >
+                  <LogOutIcon className="h-4 w-4" />
+                  Sign Out
+                </Button>
+              </div>
             </div>
           </div>
         </div>
