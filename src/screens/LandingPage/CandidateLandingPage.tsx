@@ -534,10 +534,10 @@ export const CandidateLandingPage = (): JSX.Element => {
                 <img
                   src="/logotext_poweredby_360w.png"
                   alt="Powered by Bolt"
-                  className="h-8 opacity-80 hover:opacity-100 transition-opacity duration-200 cursor-pointer"
+                  className="h-12 opacity-80 hover:opacity-100 transition-opacity duration-200 cursor-pointer"
                   onClick={() => window.open('https://bolt.new/', '_blank', 'noopener,noreferrer')}
                 />
-                <BoltBadge size="sm" />
+                <BoltBadge size="lg" />
               </div>
               <p className="text-center text-gray-400">
                 &copy; 2025 IntrvuRecruiter. All rights reserved.
