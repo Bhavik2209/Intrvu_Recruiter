@@ -565,8 +565,19 @@ export const CandidateLandingPage = (): JSX.Element => {
             </div>
           </div>
           
-          <div className="border-t border-gray-800 mt-8 pt-8 text-center text-gray-400">
-            <p>&copy; 2025 IntrvuRecruiter. All rights reserved.</p>
+          {/* Powered by Bolt Section */}
+          <div className="border-t border-gray-800 mt-8 pt-8">
+            <div className="flex flex-col items-center justify-center space-y-4">
+              <img
+                src="/logotext_poweredby_360w.png"
+                alt="Powered by Bolt"
+                className="h-8 opacity-80 hover:opacity-100 transition-opacity duration-200 cursor-pointer"
+                onClick={() => window.open('https://bolt.new/', '_blank', 'noopener,noreferrer')}
+              />
+              <p className="text-center text-gray-400">
+                &copy; 2025 IntrvuRecruiter. All rights reserved.
+              </p>
+            </div>
           </div>
         </div>
       </footer>
