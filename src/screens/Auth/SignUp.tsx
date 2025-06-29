@@ -92,9 +92,9 @@ export const SignUp = (): JSX.Element => {
         }
         
         setSuccess(true)
-        // Auto-redirect to main app after successful signup
+        // Redirect to recruitment dashboard after successful signup
         setTimeout(() => {
-          navigate('/')
+          navigate('/recruitment')
         }, 1500)
       } else {
         console.error('Sign up returned no user data')
@@ -123,7 +123,7 @@ export const SignUp = (): JSX.Element => {
               <p className="text-gray-600 mb-4">
                 Welcome to IntrvuRecruiter, {name}! Your account has been successfully created.
               </p>
-              <p className="text-sm text-gray-500">Redirecting to dashboard...</p>
+              <p className="text-sm text-gray-500">Redirecting to your dashboard...</p>
             </CardContent>
           </Card>
         </div>
